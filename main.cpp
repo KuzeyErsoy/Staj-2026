@@ -3,29 +3,23 @@ int main() {
     InitWindow(800, 600, "Hello Raylib");
     SetTargetFPS(60);
 
+    Vector3 defaultCameraPosition = { 10.0f, 10.0f, 10.0f };
+    Vector3 defaultTargetPosition = { 0.0f, 0.0f, 0.0f };
+
     Camera3D camera = { 0 };
-    camera.position = (Vector3){ 10.0f, 10.0f, 10.0f };
-    camera.target = (Vector3){ 0.0f, 0.0f, 0.0f };
+    camera.position = defaultCameraPosition;
+    camera.target = defaultTargetPosition;
     camera.up = (Vector3){ 0.0f, 1.0f, 0.0f };
     camera.fovy = 45.0f;
     camera.projection = CAMERA_PERSPECTIVE;
 
 
     while (!WindowShouldClose()) {
-        //Fine Tuning Camera Movement
-        if (IsKeyDown(KEY_RIGHT) && IsKeyDown(KEY_SPACE)) {
-            camera.position.x -= 0.4f;
-        }
-        if (IsKeyDown(KEY_LEFT) && IsKeyDown(KEY_SPACE)) {
-            camera.position.x += 0.4f;
-        }
-        if (IsKeyDown(KEY_UP) && IsKeyDown(KEY_SPACE)) {
-            camera.position.z += 0.4f;
-        }
-        if (IsKeyDown(KEY_DOWN) && IsKeyDown(KEY_SPACE)) {
-            camera.position.z -= 0.4f;
-        }
 
+        if (IsKeyDown(KEY_R)) {
+            camera.position = defaultCameraPosition;
+            camera.target = defaultTargetPosition;
+        }
 
         //Normal Focus Camera Movement
         if (IsKeyDown(KEY_RIGHT)) {
@@ -40,6 +34,7 @@ int main() {
         if (IsKeyDown(KEY_DOWN)) {
             camera.position.z += 0.5f;
         }
+
         //Fast Camera Movement
         if (IsKeyDown(KEY_RIGHT) && IsKeyDown(KEY_LEFT_SHIFT)) {
             camera.position.x += 1.0f;
@@ -54,6 +49,19 @@ int main() {
             camera.position.z += 1.0f;
         }
 
+        //Fine Tuning Camera Movement
+        if (IsKeyDown(KEY_RIGHT) && IsKeyDown(KEY_SPACE)) {
+            camera.position.x -= 0.4f;
+        }
+        if (IsKeyDown(KEY_LEFT) && IsKeyDown(KEY_SPACE)) {
+            camera.position.x += 0.4f;
+        }
+        if (IsKeyDown(KEY_UP) && IsKeyDown(KEY_SPACE)) {
+            camera.position.z += 0.4f;
+        }
+        if (IsKeyDown(KEY_DOWN) && IsKeyDown(KEY_SPACE)) {
+            camera.position.z -= 0.4f;
+        }
         
         BeginDrawing();
         ClearBackground(RAYWHITE);
