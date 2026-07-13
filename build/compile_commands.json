@@ -1,8 +1,0 @@
-[
-{
-  "directory": "/Users/kuzeyersoy/Staj26/build",
-  "command": "/usr/bin/clang++ -DGRAPHICS_API_OPENGL_33 -DPLATFORM_DESKTOP -DUSE_LIBTYPE_SHARED -isystem /opt/homebrew/include -g -std=gnu++17 -arch arm64 -F/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/System/Library/Frameworks  -o CMakeFiles/Staj26.dir/main.cpp.o -c /Users/kuzeyersoy/Staj26/main.cpp",
-  "file": "/Users/kuzeyersoy/Staj26/main.cpp",
-  "output": "CMakeFiles/Staj26.dir/main.cpp.o"
-}
-]

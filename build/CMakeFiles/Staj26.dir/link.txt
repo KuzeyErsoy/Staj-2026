@@ -1,1 +1,0 @@
-/usr/bin/clang++ -g -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/Staj26.dir/main.cpp.o -o Staj26 -F/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/System/Library/Frameworks  -Wl,-rpath,/opt/homebrew/lib /opt/homebrew/lib/libraylib.6.0.0.dylib -framework OpenGL

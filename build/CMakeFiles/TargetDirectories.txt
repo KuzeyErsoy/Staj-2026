@@ -1,3 +1,0 @@
-/Users/kuzeyersoy/Staj26/build/CMakeFiles/Staj26.dir
-/Users/kuzeyersoy/Staj26/build/CMakeFiles/edit_cache.dir
-/Users/kuzeyersoy/Staj26/build/CMakeFiles/rebuild_cache.dir
