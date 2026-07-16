@@ -1,32 +1,75 @@
 #include "raylib.h"
+#include "raymath.h"
+
+#define MAX_BOXES 20
+
+typedef struct {
+    Vector3 position;
+    bool active;
+} Collectible;
+
 int main() {
     InitWindow(800, 800, "Tactical Radar");
     SetTargetFPS(60);
 
-    Vector3 defaultCameraPosition = { 10.0f, 10.0f, 10.0f };
+    Vector3 defaultCameraPosition = { 20.0f, 20.0f, 20.0f };
     Vector3 defaultTargetPosition = { 0.0f, 0.0f, 0.0f };
-    Vector3 cubePosition = { 0.0f, 5.0f, 0.0f };
-    Vector3 cubeSize = { 10.0f, 10.0f, 10.0f };
+    Vector3 playerPosition = { 0.0f, 0.0f, 0.0f };
+    Vector3 modelScale = { 1.0f, 1.00f, 1.0f };
 
     Camera3D camera = { 0 };
     camera.position = defaultCameraPosition;
-    camera.target = defaultTargetPosition; // Set the camera to look at the default target position
+    camera.target = defaultTargetPosition;
     camera.up = (Vector3){ 0.0f, 1.0f, 0.0f };
     camera.fovy = 45.0f;
     camera.projection = CAMERA_PERSPECTIVE;
 
+    Model characterModel = LoadModel("../resources/character/character-a.obj");
+    if (characterModel.meshCount == 0) {
+        TraceLog(LOG_ERROR, "Model yuklenemedi!");
+    }
+
+    Texture2D characterTexture = LoadTexture("../resources/character/texture-a.png");
+    if (characterTexture.id == 0) {
+        TraceLog(LOG_ERROR, "Texture yuklenemedi!");
+    }
+    characterModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = characterTexture;
+
+    int score = 0;
+    bool canEat = false;
+    int targetBoxIndex = -1;
+    bool focusPlayer = false;
+
+    Collectible boxes[MAX_BOXES];
+    for (int i = 0; i < MAX_BOXES; i++) {
+        boxes[i].position = (Vector3){
+            (float)GetRandomValue(-45, 45),
+            0.75f, 
+            (float)GetRandomValue(-45, 45)
+        };
+        boxes[i].active = true;
+    }
 
     while (!WindowShouldClose()) {
         Vector3 prevCameraPosition = camera.position;
-        Vector3 prevCubePosition = cubePosition;
+        Vector3 prevPlayerPosition = playerPosition;
 
-    //CAM MOVEMENTS
-
-
+        //CAM MOVEMENTS
         if (IsKeyDown(KEY_R)) {
             camera.position = defaultCameraPosition;
             camera.target = defaultTargetPosition;
-            cubePosition = { 0.0f, 5.0f, 0.0f };
+            playerPosition = (Vector3){ 0.0f, 0.0f, 0.0f };
+            focusPlayer = false;
+        }
+
+        if (IsKeyPressed(KEY_T)) {
+            focusPlayer = !focusPlayer;
+        }
+
+        if (focusPlayer) {
+            camera.target = playerPosition;
+        } else {
+            camera.target = defaultTargetPosition;
         }
 
         //Change Camera Height
@@ -39,115 +82,112 @@ int main() {
 
         //Normal Focus Camera Movement
         if (IsKeyDown(KEY_RIGHT)) {
-            if (IsKeyDown(KEY_LEFT_SHIFT)) {
-                camera.position.x += 1.0f;
-            }
-            else if (IsKeyDown(KEY_SPACE)) {
-                camera.position.x -= 0.4f;
-            }
-            else {
-                camera.position.x += 0.5f;
-            }
+            if (IsKeyDown(KEY_LEFT_SHIFT)) camera.position.x += 1.0f;
+            else if (IsKeyDown(KEY_SPACE)) camera.position.x -= 0.4f;
+            else camera.position.x += 0.5f;
         }
         if (IsKeyDown(KEY_LEFT)) {
-            if (IsKeyDown(KEY_LEFT_SHIFT)) {
-                camera.position.x -= 1.0f;
-            }
-            else if (IsKeyDown(KEY_SPACE)) {
-                camera.position.x += 0.4f;
-            }
-            else {
-                camera.position.x -= 0.5f;
-            }
-            camera.position.x -= 0.5f;
+            if (IsKeyDown(KEY_LEFT_SHIFT)) camera.position.x -= 1.0f;
+            else if (IsKeyDown(KEY_SPACE)) camera.position.x += 0.4f;
+            else camera.position.x -= 0.5f;
         }
-        if (IsKeyDown(KEY_UP)) {
-            if (IsKeyDown(KEY_LEFT_SHIFT)) {
-                camera.position.z -= 1.0f;
-            }
-            else if (IsKeyDown(KEY_SPACE)) {
-                camera.position.z += 0.4f;
-            }
-            else {
-                camera.position.z -= 0.5f;
-            }
-            camera.position.z -= 0.5f;
+        if (IsKeyDown(KEY_UP) && !IsKeyDown(KEY_LEFT_ALT)) {
+            if (IsKeyDown(KEY_LEFT_SHIFT)) camera.position.z -= 1.0f;
+            else if (IsKeyDown(KEY_SPACE)) camera.position.z += 0.4f;
+            else camera.position.z -= 0.5f;
         }
-        if (IsKeyDown(KEY_DOWN)) {
-            if (IsKeyDown(KEY_LEFT_SHIFT)) {
-                camera.position.z += 1.0f;
-            }
-            else if (IsKeyDown(KEY_SPACE)) {
-                camera.position.z -= 0.4f;
-            }
-            else {
-                camera.position.z += 0.5f;
-            }
-            camera.position.z += 0.5f;
+        if (IsKeyDown(KEY_DOWN) && !IsKeyDown(KEY_LEFT_ALT)) {
+            if (IsKeyDown(KEY_LEFT_SHIFT)) camera.position.z += 1.0f;
+            else if (IsKeyDown(KEY_SPACE)) camera.position.z -= 0.4f;
+            else camera.position.z += 0.5f;
         }
         
-        //Cube Movements
+        //Player Movements
         if (IsKeyDown(KEY_W)) {
-            cubePosition.z -= 0.5f;
+            playerPosition.z -= 0.5f;
         }
         if (IsKeyDown(KEY_S)) {
-            cubePosition.z += 0.5f;
+            playerPosition.z += 0.5f;
         }
         if (IsKeyDown(KEY_A)) {
-            cubePosition.x -= 0.5f;
+            playerPosition.x -= 0.5f;
         }
         if (IsKeyDown(KEY_D)) {
-            cubePosition.x += 0.5f;
+            playerPosition.x += 0.5f;
         }
 
+        //Player Movement Boundaries
+        if (playerPosition.x < -50.0f) playerPosition.x = -50.0f;
+        if (playerPosition.x > 50.0f) playerPosition.x = 50.0f;
+        if (playerPosition.z < -50.0f) playerPosition.z = -50.0f;
+        if (playerPosition.z > 50.0f) playerPosition.z = 50.0f;
 
-        //Cube Movement Boundaries
-        if (cubePosition.x < -20.0f) cubePosition.x = -20.0f;
-        if (cubePosition.x > 20.0f) cubePosition.x = 20.0f;
-        if (cubePosition.z < -20.0f) cubePosition.z = -20.0f;
-        if (cubePosition.z > 20.0f) cubePosition.z = 20.0f;
-        
-        float halfX = cubeSize.x / 2.0f;
-        float halfZ = cubeSize.z / 2.0f;
-        float halfY = cubeSize.y / 2.0f;
+        //Eating Mechanics
+        canEat = false;
+        targetBoxIndex = -1;
+        for (int i = 0; i < MAX_BOXES; i++) {
+            if (boxes[i].active) {
+                float dist = Vector3Distance(playerPosition, boxes[i].position);
+                if (dist < 3.5f) {
+                    canEat = true;
+                    targetBoxIndex = i;
+                    break;
+                }
+            }
+        }
 
-        //Collision Detector
-        bool isCollision = (camera.position.x >= cubePosition.x - halfX && camera.position.x <= cubePosition.x + halfX) &&
-                           (camera.position.z >= cubePosition.z - halfZ && camera.position.z <= cubePosition.z + halfZ) &&
-                           (camera.position.y >= cubePosition.y - halfY && camera.position.y <= cubePosition.y + halfY);
-        
-        if (isCollision) {
-            cubePosition = prevCubePosition;
-            camera.position = prevCameraPosition;
+        if (canEat && IsKeyPressed(KEY_E)) {
+            boxes[targetBoxIndex].active = false;
+            score += 10;
         }
 
         BeginDrawing();
         ClearBackground(RAYWHITE);
         BeginMode3D(camera);
-        DrawGrid(20, 3.0f);
-        DrawCube(cubePosition, cubeSize.x, cubeSize.y, cubeSize.z, RED);
-        DrawCubeWires(cubePosition, cubeSize.x, cubeSize.y, cubeSize.z, GREEN);
-        DrawLine3D(Vector3 {-20.0f, 0.0f, -20.0f}, {-20.0f, 0.0f, 20.0f}, RED);
-        DrawLine3D(Vector3 {-20.0f, 0.0f, -20.0f}, {20.0f, 0.0f, -20.0f}, RED);
-        DrawLine3D(Vector3 {20.0f, 0.0f, -20.0f}, {20.0f, 0.0f, 20.0f}, RED);
-        DrawLine3D(Vector3 {-20.0f, 0.0f, 20.0f}, {20.0f, 0.0f, 20.0f}, RED);
+        
+        DrawPlane((Vector3){ 0.0f, 0.0f, 0.0f }, (Vector2){ 100.0f, 100.0f }, LIGHTGRAY);
+        DrawGrid(100, 1.0f);
+        
+        DrawModelEx(characterModel, playerPosition, (Vector3){ 0.0f, 1.0f, 0.0f }, 0.0f, modelScale, WHITE);
+
+        for (int i = 0; i < MAX_BOXES; i++) {
+            if (boxes[i].active) {
+                DrawCube(boxes[i].position, 1.5f, 1.5f, 1.5f, RED);
+                DrawCubeWires(boxes[i].position, 1.5f, 1.5f, 1.5f, MAROON);
+            }
+        }
 
         EndMode3D();
-        //HELP INSTRUCTIONS
-        
-        if (IsKeyDown(KEY_H)) {
-            DrawText("Use arrow keys to move the camera", 10, 10, 20, DARKGRAY);
-            DrawText("Hold ALT(OPTION FOR MAC) + UP/DOWN to change camera height", 10, 40, 20, DARKGRAY);
-            DrawText("Hold SHIFT to move faster", 10, 70, 20, DARKGRAY);
-            DrawText("Hold SPACE to move slower", 10, 100, 20, DARKGRAY);
-            DrawText("Use WASD to move the cube", 10, 130, 20, DARKGRAY);
-            DrawText("Press R to reset camera and cube position", 10, 160, 20, DARKGRAY);
-        } else {
-            DrawText("Press H for help", 10, 10, 20, DARKGRAY);
-        }
-        EndDrawing();
 
+        //UI
+        DrawText(TextFormat("SCORE: %d", score), 20, 20, 30, DARKGREEN);
+
+        if (canEat) {
+            DrawText("PRESS 'E' TO INTERACT", 300, 600, 30, RED);
+        }
+
+        //HELP INSTRUCTIONS
+        if (IsKeyDown(KEY_H)) {
+            int helpX = GetScreenWidth() - 360;
+            DrawRectangle(helpX - 10, 10, 360, 200, Fade(SKYBLUE, 0.8f));
+            DrawText("Use arrow keys to move the camera", helpX, 20, 15, DARKGRAY);
+            DrawText("Hold ALT + UP/DOWN to change camera height", helpX, 45, 15, DARKGRAY);
+            DrawText("Hold SHIFT to move faster", helpX, 70, 15, DARKGRAY);
+            DrawText("Hold SPACE to move slower", helpX, 95, 15, DARKGRAY);
+            DrawText("Use WASD to move the character", helpX, 120, 15, DARKGRAY);
+            DrawText("Press T to toggle camera focus", helpX, 145, 15, DARKGRAY);
+            DrawText("Press R to reset camera and player", helpX, 170, 15, DARKGRAY);
+        } else {
+            const char* helpText = "Press H for help";
+            DrawText(helpText, GetScreenWidth() - MeasureText(helpText, 20) - 20, 20, 20, DARKGRAY);
+        }
+
+        EndDrawing();
     }
+
+    UnloadTexture(characterTexture);
+    UnloadModel(characterModel);
+    
     CloseWindow();
 
     return 0;
