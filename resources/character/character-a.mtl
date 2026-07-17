@@ -2,5 +2,5 @@
 
 newmtl texture-a
 Kd 1 1 1
-map_Kd Textures/texture-a.png
+map_Kd texture-a.png
 
