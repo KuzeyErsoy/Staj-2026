@@ -3,10 +3,8 @@ project(Staj26)
 
 set(CMAKE_CXX_STANDARD 17)
 
-# 1. FetchContent modülünü çağırıyoruz
 include(FetchContent)
 
-# 2. Raylib'i GitHub'dan projeye otomatik olarak dahil ediyoruz
 FetchContent_Declare(
     raylib
     GIT_REPOSITORY https://github.com/raysan5/raylib.git
@@ -15,8 +13,6 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(raylib)
 
-# 3. Kendi kodumuzu derliyoruz
-add_executable(${PROJECT_NAME} main.cpp)
+add_executable(${PROJECT_NAME} main.cpp Player.cpp)
 
-# 4. İndirilen Raylib'i projemize bağlıyoruz
 target_link_libraries(${PROJECT_NAME} PRIVATE raylib)
