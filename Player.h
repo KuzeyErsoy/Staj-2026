@@ -7,9 +7,10 @@ public:
     Vector3 prevPosition;
     Vector3 velocity;
     float rotationAngle;
+    bool isGrounded; 
     
     Player(Vector3 startPos);
-    ~Player(); // Destructor: Bellek yonetimi icin (RAII)
+    ~Player(); 
 
     void Update();
     void Draw();
@@ -19,5 +20,4 @@ private:
     Model model;
     Texture2D texture;
     Vector3 scale;
-    bool isGrounded;
 };

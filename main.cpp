@@ -1,6 +1,7 @@
 #include "raylib.h"
 #include "raymath.h"
 #include "Player.h"
+#include "Map.h"
 
 #define MAX_BOXES 20
 
@@ -10,11 +11,11 @@ typedef struct {
 } Collectible;
 
 int main() {
-    // InitWindow must be called before loading models/textures
     InitWindow(800, 800, "Tactical Radar");
     SetTargetFPS(60);
 
-    Player player((Vector3){ 0.0f, 0.0f, 0.0f });
+    Player player((Vector3){ 0.0f, 10.0f, 0.0f });
+    Map gameMap;
 
     Vector3 defaultCameraPosition = { 20.0f, 20.0f, 20.0f };
     Vector3 defaultTargetPosition = { 0.0f, 0.0f, 0.0f };
@@ -34,9 +35,9 @@ int main() {
     Collectible boxes[MAX_BOXES];
     for (int i = 0; i < MAX_BOXES; i++) {
         boxes[i].position = (Vector3){
-            (float)GetRandomValue(-45, 45),
+            (float)GetRandomValue(-20, 20),
             0.75f, 
-            (float)GetRandomValue(-45, 45)
+            (float)GetRandomValue(-20, 20)
         };
         boxes[i].active = true;
     }
@@ -89,8 +90,8 @@ int main() {
 
         // UPDATE
         player.Update();
+        gameMap.HandleCollisions(player);
 
-        // Collision Detection
         BoundingBox playerBounds = player.GetBounds();
         bool isColliding = false;
 
@@ -109,7 +110,8 @@ int main() {
         }
 
         if (isColliding) {
-            player.position = player.prevPosition;
+            player.position.x = player.prevPosition.x;
+            player.position.z = player.prevPosition.z;
         }
 
         // Eating Mechanics
@@ -137,8 +139,8 @@ int main() {
         BeginMode3D(camera);
         
         DrawPlane((Vector3){ 0.0f, 0.0f, 0.0f }, (Vector2){ 100.0f, 100.0f }, LIGHTGRAY);
-        DrawGrid(100, 1.0f);
         
+        gameMap.Draw();
         player.Draw();
 
         for (int i = 0; i < MAX_BOXES; i++) {
