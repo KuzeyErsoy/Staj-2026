@@ -11,7 +11,9 @@ Map::Map() {
     if (modelLong.meshCount > 0) modelLong.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = texturePalette;
     if (modelSlope.meshCount > 0) modelSlope.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = texturePalette;
     if (modelTall.meshCount > 0) modelTall.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = texturePalette;
+    
 
+    AddBlock((Vector3){ 0.0f, 0.0f, 0.0f }, BLOCK_TALL); // Starting block for player spawn
 // Base Ground Area (Starting area, 2x2 blocks)
     AddBlock((Vector3){ 0.0f, 0.0f, 0.0f }, BLOCK_LONG);
     AddBlock((Vector3){ 0.0f, 0.0f, -5.0f }, BLOCK_LONG);

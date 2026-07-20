@@ -2,6 +2,7 @@
 #include "raymath.h"
 #include "Player.h"
 #include "Map.h"
+#include <math.h>
 
 #define MAX_BOXES 20
 
@@ -41,9 +42,16 @@ int main() {
         };
         boxes[i].active = true;
     }
+    DisableCursor();
+
+        float cameraRadius = 10.0f; 
+        float cameraYaw = 0.0f;  
+        float cameraPitch = 0.5f;   
+        float mouseSensitivity = 0.003f; 
 
     while (!WindowShouldClose()) {
         Vector3 prevCameraPosition = camera.position;
+        
 
         // CAM MOVEMENTS
         if (IsKeyDown(KEY_R)) {
@@ -109,6 +117,22 @@ int main() {
             }
         }
 
+
+        // --- Smart Cam Update ---
+        Vector2 mouseDelta = GetMouseDelta();
+        
+   
+        cameraYaw -= mouseDelta.x * mouseSensitivity;
+        cameraPitch += mouseDelta.y * mouseSensitivity;
+
+        if (cameraPitch > 1.5f) cameraPitch = 1.5f;
+        if (cameraPitch < -0.1f) cameraPitch = -0.1f; 
+        camera.target = (Vector3){ player.position.x, player.position.y + 1.5f, player.position.z };
+
+        camera.position.x = camera.target.x + cameraRadius * cosf(cameraPitch) * sinf(cameraYaw);
+        camera.position.y = camera.target.y + cameraRadius * sinf(cameraPitch);
+        camera.position.z = camera.target.z + cameraRadius * cosf(cameraPitch) * cosf(cameraYaw);
+
         if (isColliding) {
             player.position.x = player.prevPosition.x;
             player.position.z = player.prevPosition.z;
@@ -138,7 +162,7 @@ int main() {
         ClearBackground(RAYWHITE);
         BeginMode3D(camera);
         
-        DrawPlane((Vector3){ 0.0f, 0.0f, 0.0f }, (Vector2){ 100.0f, 100.0f }, LIGHTGRAY);
+        DrawPlane((Vector3){ 0.0f, 0.0f, 0.0f }, (Vector2){ 100.0f, 100.0f }, GREEN); // Ground
         
         gameMap.Draw();
         player.Draw();
