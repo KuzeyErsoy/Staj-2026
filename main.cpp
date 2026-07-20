@@ -97,7 +97,7 @@ int main() {
         }
 
         // UPDATE
-        player.Update();
+        player.Update(cameraYaw);
         gameMap.HandleCollisions(player);
 
         BoundingBox playerBounds = player.GetBounds();

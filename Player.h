@@ -12,7 +12,7 @@ public:
     Player(Vector3 startPos);
     ~Player(); 
 
-    void Update();
+    void Update(float cameraYaw);
     void Draw();
     BoundingBox GetBounds();
 

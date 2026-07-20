@@ -23,23 +23,38 @@ Player::~Player() {
     UnloadModel(model);
 }
 
-void Player::Update() {
+void Player::Update(float cameraYaw) {
     prevPosition = position;
 
     // Movement Inputs
-    Vector3 moveDir = { 0.0f, 0.0f, 0.0f };
+    Vector3 inputDir = { 0.0f, 0.0f, 0.0f };
     
-    if (IsKeyDown(KEY_W)) moveDir.z -= 0.5f;
-    if (IsKeyDown(KEY_S)) moveDir.z += 0.5f;
-    if (IsKeyDown(KEY_A)) moveDir.x -= 0.5f;
-    if (IsKeyDown(KEY_D)) moveDir.x += 0.5f;
+    if (IsKeyDown(KEY_W)) inputDir.z -= 1.0f;
+    if (IsKeyDown(KEY_S)) inputDir.z += 1.0f;
+    if (IsKeyDown(KEY_A)) inputDir.x -= 1.0f;
+    if (IsKeyDown(KEY_D)) inputDir.x += 1.0f;
 
-    position.x += moveDir.x;
-    position.z += moveDir.z;
+    Vector3 moveDir = { 0.0f, 0.0f, 0.0f };
 
-    // Rotation Logic
-    if (moveDir.x != 0.0f || moveDir.z != 0.0f) {
-        // atan2f gives angle in radians. Convert to degrees.
+    if (inputDir.x != 0.0f || inputDir.z != 0.0f) {
+        float length = sqrtf(inputDir.x * inputDir.x + inputDir.z * inputDir.z);
+        inputDir.x /= length;
+        inputDir.z /= length;
+
+        float speed = 0.5f;
+        float sinYaw = sinf(cameraYaw);
+        float cosYaw = cosf(cameraYaw);
+
+        moveDir.x = (cosYaw * inputDir.x) + (-sinYaw * -inputDir.z);
+        moveDir.z = (-sinYaw * inputDir.x) + (-cosYaw * -inputDir.z);
+
+        moveDir.x *= speed;
+        moveDir.z *= speed;
+
+        position.x += moveDir.x;
+        position.z += moveDir.z;
+
+        // Rotation Logic
         rotationAngle = atan2f(moveDir.x, moveDir.z) * (180.0f / PI);
     }
 
