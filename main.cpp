@@ -1,15 +1,11 @@
+#include "CameraController.h"
+#include "Collectible.h"
 #include "Map.h"
 #include "Player.h"
 #include "raylib.h"
-#include "raymath.h"
-#include <math.h>
+#include <vector>
 
 #define MAX_BOXES 20
-
-typedef struct {
-  Vector3 position;
-  bool active;
-} Collectible;
 
 int main() {
   InitWindow(800, 800, "Tactical Radar");
@@ -17,173 +13,77 @@ int main() {
 
   Player player((Vector3){10.0f, 10.0f, 0.0f});
   Map gameMap;
+  CameraController cameraController;
 
-  Vector3 defaultCameraPosition = {20.0f, 20.0f, 20.0f};
-  Vector3 defaultTargetPosition = {0.0f, 0.0f, 0.0f};
-
-  Camera3D camera = {0};
-  camera.position = defaultCameraPosition;
-  camera.target = defaultTargetPosition;
-  camera.up = (Vector3){0.0f, 1.0f, 0.0f};
-  camera.fovy = 45.0f;
-  camera.projection = CAMERA_PERSPECTIVE;
-
-  int score = 0;
-  bool canEat = false;
-  int targetBoxIndex = -1;
-  bool isStrategicView = false;
-
-  Collectible boxes[MAX_BOXES];
+  std::vector<Collectible> boxes;
   for (int i = 0; i < MAX_BOXES; i++) {
-    boxes[i].position = (Vector3){(float)GetRandomValue(-20, 20), 0.75f,
-                                  (float)GetRandomValue(-20, 20)};
-    boxes[i].active = true;
+    Vector3 pos = {(float)GetRandomValue(-20, 20), 0.75f,
+                   (float)GetRandomValue(-20, 20)};
+    boxes.push_back(Collectible(pos));
   }
+
   DisableCursor();
 
-  float cameraRadius = 10.0f;
-  float cameraYaw = 0.0f;
-  float cameraPitch = 0.5f;
-  float mouseSensitivity = 0.003f;
-
   while (!WindowShouldClose()) {
-    Vector3 prevCameraPosition = camera.position;
-
-    // CAM MOVEMENTS
-    if (IsKeyDown(KEY_R)) {
-      camera.position = defaultCameraPosition;
-      camera.target = defaultTargetPosition;
-      player.position = (Vector3){10.0f, 10.0f, 0.0f};
-      player.velocity = (Vector3){0.0f, 0.0f, 0.0f};
-    }
-
-    if (IsKeyPressed(KEY_T)) {
-      isStrategicView = !isStrategicView;
-      if (isStrategicView) {
-        camera.position = defaultCameraPosition;
-      }
-    }
-
-    if (isStrategicView) {
-      camera.target = player.position;
-
-      if (IsKeyDown(KEY_UP))
-        camera.position.y += 0.5f;
-      if (IsKeyDown(KEY_DOWN))
-        camera.position.y -= 0.5f;
-
-      if (IsKeyDown(KEY_RIGHT))
-        camera.position.x += 0.5f;
-      if (IsKeyDown(KEY_LEFT))
-        camera.position.x -= 0.5f;
-      if (IsKeyDown(KEY_UP))
-        camera.position.z -= 0.5f;
-      if (IsKeyDown(KEY_DOWN))
-        camera.position.z += 0.5f;
-    }
-
-    // UPDATE
-    player.Update(cameraYaw);
+    // --- UPDATE ---
+    cameraController.Update(player);
+    player.Update(cameraController.GetYaw());
     gameMap.HandleCollisions(player);
 
+    // Update collectibles & handle collisions
     BoundingBox playerBounds = player.GetBounds();
-    bool isColliding = false;
-
-    for (int i = 0; i < MAX_BOXES; i++) {
-      if (boxes[i].active) {
-        BoundingBox boxBounds = {
-            (Vector3){boxes[i].position.x - 0.75f, boxes[i].position.y - 0.75f,
-                      boxes[i].position.z - 0.75f},
-            (Vector3){boxes[i].position.x + 0.75f, boxes[i].position.y + 0.75f,
-                      boxes[i].position.z + 0.75f}};
-
-        if (CheckCollisionBoxes(playerBounds, boxBounds)) {
-          isColliding = true;
-          break;
+    for (auto &box : boxes) {
+      if (box.active) {
+        box.Update();
+        if (CheckCollisionBoxes(playerBounds, box.GetBounds())) {
+          box.active = false;
+          player.AddExp(10);
         }
       }
     }
 
-    // --- Smart Cam Update ---
-    if (!isStrategicView) {
-      Vector2 mouseDelta = GetMouseDelta();
-
-      cameraYaw -= mouseDelta.x * mouseSensitivity;
-      cameraPitch += mouseDelta.y * mouseSensitivity;
-
-      if (cameraPitch > 1.5f)
-        cameraPitch = 1.5f;
-      if (cameraPitch < -0.1f)
-        cameraPitch = -0.1f;
-      camera.target = (Vector3){player.position.x, player.position.y + 1.5f,
-                                player.position.z};
-
-      camera.position.x =
-          camera.target.x + cameraRadius * cosf(cameraPitch) * sinf(cameraYaw);
-      camera.position.y = camera.target.y + cameraRadius * sinf(cameraPitch);
-      camera.position.z =
-          camera.target.z + cameraRadius * cosf(cameraPitch) * cosf(cameraYaw);
-    }
-
-    if (isColliding) {
-      player.position.x = player.prevPosition.x;
-      player.position.z = player.prevPosition.z;
-    }
-
-    // Eating Mechanics
-    canEat = false;
-    targetBoxIndex = -1;
-    for (int i = 0; i < MAX_BOXES; i++) {
-      if (boxes[i].active) {
-        float dist = Vector3Distance(player.position, boxes[i].position);
-        if (dist < 3.5f) {
-          canEat = true;
-          targetBoxIndex = i;
-          break;
-        }
-      }
-    }
-
-    if (canEat && IsKeyPressed(KEY_E)) {
-      boxes[targetBoxIndex].active = false;
-      score += 10;
-    }
-
-    // DRAW
+    // --- DRAW ---
     BeginDrawing();
     ClearBackground(RAYWHITE);
-    BeginMode3D(camera);
 
+    // 3D Scene
+    BeginMode3D(cameraController.GetCamera());
     DrawPlane((Vector3){0.0f, 0.0f, 0.0f}, (Vector2){100.0f, 100.0f},
               GREEN); // Ground
-
     gameMap.Draw();
     player.Draw();
 
-    for (int i = 0; i < MAX_BOXES; i++) {
-      if (boxes[i].active) {
-        DrawCube(boxes[i].position, 1.5f, 1.5f, 1.5f, RED);
-        DrawCubeWires(boxes[i].position, 1.5f, 1.5f, 1.5f, MAROON);
-      }
+    for (auto &box : boxes) {
+      box.Draw();
     }
-
     EndMode3D();
 
-    // UI
-    DrawText(TextFormat("SCORE: %d", score), 20, 20, 30, DARKGREEN);
+    // 2D UI - EXP Bar at Bottom
+    int barWidth = 600;
+    int barHeight = 25;
+    int barX = (GetScreenWidth() - barWidth) / 2;
+    int barY = GetScreenHeight() - 40;
 
-    if (canEat) {
-      DrawText("PRESS 'E' TO INTERACT", 300, 600, 30, RED);
-    }
+    float expRatio = (float)player.exp / (float)player.maxExp;
+    if (expRatio > 1.0f)
+      expRatio = 1.0f;
+    int fillWidth = (int)(barWidth * expRatio);
 
+    // EXP Bar background & fill
+    DrawRectangle(barX - 2, barY - 2, barWidth + 4, barHeight + 4, DARKGRAY);
+    DrawRectangle(barX, barY, barWidth, barHeight, LIGHTGRAY);
+    DrawRectangle(barX, barY, fillWidth, barHeight, GOLD);
+    DrawRectangleLines(barX, barY, barWidth, barHeight, ORANGE);
+    DrawText(TextFormat("EXP: %d / %d", player.exp, player.maxExp),
+             barX + barWidth / 2 - 50, barY + 4, 18, DARKBLUE);
+
+    // Controls Help Menu
     if (IsKeyDown(KEY_H)) {
       int helpX = GetScreenWidth() - 360;
       DrawRectangle(helpX - 10, 10, 360, 220, Fade(SKYBLUE, 0.8f));
-      DrawText("Use arrow keys to move the camera", helpX, 20, 15, DARKGRAY);
-      DrawText("Hold ALT + UP/DOWN to change camera height", helpX, 45, 15,
+      DrawText("Use arrow keys to move the camera (Strategic)", helpX, 20, 15,
                DARKGRAY);
-      DrawText("Hold SHIFT to move faster", helpX, 70, 15, DARKGRAY);
-      DrawText("Hold SPACE to move slower", helpX, 95, 15, DARKGRAY);
+      DrawText("Hold SHIFT to Dash", helpX, 45, 15, DARKGRAY);
       DrawText("Use WASD to move the character", helpX, 120, 15, DARKGRAY);
       DrawText("Press SPACE to jump", helpX, 145, 15, DARKGRAY);
       DrawText("Press T to toggle strategic view", helpX, 170, 15, DARKGRAY);
@@ -198,6 +98,5 @@ int main() {
   }
 
   CloseWindow();
-
   return 0;
 }

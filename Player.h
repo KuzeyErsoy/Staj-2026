@@ -13,12 +13,16 @@ public:
     float dashCooldownTimer;
     Vector3 dashDirection;
     
+    int exp;
+    int maxExp;
+    
     Player(Vector3 startPos);
     ~Player(); 
 
     void Update(float cameraYaw);
     void Draw();
     BoundingBox GetBounds();
+    void AddExp(int amount);
 
 private:
     Model model;
