@@ -9,6 +9,10 @@ Player::Player(Vector3 startPos) {
     rotationAngle = 0.0f;
     scale = (Vector3){ 1.0f, 1.0f, 1.0f };
     isGrounded = false;
+    isDashing = false;
+    dashTimer = 0.0f;
+    dashCooldownTimer = 0.0f;
+    dashDirection = (Vector3){ 0.0f, 0.0f, 0.0f };
 
     model = LoadModel("../resources/character/character-a.obj");
     texture = LoadTexture("../resources/character/texture-a.png");
@@ -25,6 +29,28 @@ Player::~Player() {
 
 void Player::Update(float cameraYaw) {
     prevPosition = position;
+    float dt = GetFrameTime();
+
+    if (dashCooldownTimer > 0.0f) {
+        dashCooldownTimer -= dt;
+    }
+
+    if (isDashing) {
+        dashTimer -= dt;
+        if (dashTimer <= 0.0f) {
+            isDashing = false;
+        }
+    }
+
+    if (IsKeyPressed(KEY_LEFT_SHIFT) && !isDashing && dashCooldownTimer <= 0.0f) {
+        isDashing = true;
+        dashTimer = 0.2f;
+        dashCooldownTimer = 2.0f;
+        
+        float rad = rotationAngle * (PI / 180.0f);
+        dashDirection.x = sinf(rad);
+        dashDirection.z = cosf(rad);
+    }
 
     // Movement Inputs
     Vector3 inputDir = { 0.0f, 0.0f, 0.0f };
@@ -36,26 +62,35 @@ void Player::Update(float cameraYaw) {
 
     Vector3 moveDir = { 0.0f, 0.0f, 0.0f };
 
-    if (inputDir.x != 0.0f || inputDir.z != 0.0f) {
-        float length = sqrtf(inputDir.x * inputDir.x + inputDir.z * inputDir.z);
-        inputDir.x /= length;
-        inputDir.z /= length;
-
-        float speed = 0.5f;
-        float sinYaw = sinf(cameraYaw);
-        float cosYaw = cosf(cameraYaw);
-
-        moveDir.x = (cosYaw * inputDir.x) + (-sinYaw * -inputDir.z);
-        moveDir.z = (-sinYaw * inputDir.x) + (-cosYaw * -inputDir.z);
-
-        moveDir.x *= speed;
-        moveDir.z *= speed;
+    if (isDashing) {
+        float dashSpeed = 2.0f;
+        moveDir.x = dashDirection.x * dashSpeed;
+        moveDir.z = dashDirection.z * dashSpeed;
 
         position.x += moveDir.x;
         position.z += moveDir.z;
+    } else {
+        if (inputDir.x != 0.0f || inputDir.z != 0.0f) {
+            float length = sqrtf(inputDir.x * inputDir.x + inputDir.z * inputDir.z);
+            inputDir.x /= length;
+            inputDir.z /= length;
 
-        // Rotation Logic
-        rotationAngle = atan2f(moveDir.x, moveDir.z) * (180.0f / PI);
+            float speed = 0.5f;
+            float sinYaw = sinf(cameraYaw);
+            float cosYaw = cosf(cameraYaw);
+
+            moveDir.x = (cosYaw * inputDir.x) + (-sinYaw * -inputDir.z);
+            moveDir.z = (-sinYaw * inputDir.x) + (-cosYaw * -inputDir.z);
+
+            moveDir.x *= speed;
+            moveDir.z *= speed;
+
+            position.x += moveDir.x;
+            position.z += moveDir.z;
+
+            // Rotation Logic
+            rotationAngle = atan2f(moveDir.x, moveDir.z) * (180.0f / PI);
+        }
     }
 
     // Gravity and Jumping

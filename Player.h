@@ -7,7 +7,11 @@ public:
     Vector3 prevPosition;
     Vector3 velocity;
     float rotationAngle;
-    bool isGrounded; 
+    bool isGrounded;
+    bool isDashing;
+    float dashTimer;
+    float dashCooldownTimer;
+    Vector3 dashDirection;
     
     Player(Vector3 startPos);
     ~Player(); 
