@@ -1,35 +1,48 @@
-# Tactical Radar - C++ & Raylib Project
+# Tactical Radar(Probably will change the name) - C++ & Raylib Project
 
 This is a 3D platformer/collectathon game built using C++ and the [raylib](https://www.raylib.com/) library. 
 
 ## Code Architecture Overview
 
-The project is structured into three main components: the main game loop (`main.cpp`), the player controller (`Player.h`/`Player.cpp`), and the map/environment manager (`Map.h`/`Map.cpp`).
+The project is structured into modular C++ classes: the core game loop (`main.cpp`), the player controller (`Player`), the camera manager (`CameraController`), the floating collectibles (`Collectible`), and the environment manager (`Map`).
 
 ### 1. `main.cpp`
-This file contains the core game loop and the integration of all systems.
-- **Initialization**: Sets up the 800x800 window, initializes the 3D camera, and instantiates the `Player` and `Map` objects.
-- **Camera System**: Implements a free-roaming 3D camera that can be controlled independently of the player using arrow keys, Shift, Space, and Alt. It also features a "focus mode" (toggled with `T`) that locks the camera onto the player.
-- **Collectibles**: Manages an array of 20 randomly placed red cubes (`Collectible` struct). Implements distance-based interaction logic where the player can press `E` to "eat" a box and increase their score when within range.
-- **Collision Integration**: Resolves player collisions with the red collectible boxes, preventing the player from passing through them.
-- **Rendering & UI**: Handles the 3D drawing phase (rendering the map, player, and boxes) and 2D UI overlay (score, interaction prompts, and a help menu accessible via `H`).
+This file contains the top-level game loop and integrates all sub-systems.
+- **Initialization**: Sets up the 800x800 window, initializes `Player`, `Map`, `CameraController`, and a `std::vector` of `Collectible` items.
+- **Game Loop (`Update` & `Draw`)**:
+  - Updates camera and passes camera Yaw angle to `Player` for camera-relative movement.
+  - Updates player movement, dash cooldowns, map collisions, and collectible interactions.
+  - Handles dynamic collectible respawning when remaining active boxes fall to 5 or lower.
+- **Rendering & UI**:
+  - 3D Pass: Renders map, player model, and 3D collectibles inside `BeginMode3D()`.
+  - 2D Pass: Renders top-left Level & Level Point text (`LEVEL: X`, `LEVEL POINT: Y`), bottom EXP progress bar, and help menu (`H`).
 
-### 2. `Player.cpp` & `Player.h`
-These files define the `Player` class, which handles character movement, physics, and rendering.
-- **Properties**: Maintains the player's 3D position, velocity, rotation, bounding box, and grounded state.
-- **Model Loading**: Loads the character's `.obj` model and texture from the `resources/character/` directory during initialization.
-- **Movement Logic (`Update()`)**: 
-  - Reads WASD input to move the character on the X and Z axes.
-  - Calculates the correct facing angle based on the movement direction using `atan2f`.
-  - Applies a simple gravity system affecting the Y velocity and allows jumping with `SPACE` when grounded.
-  - Enforces hard map boundaries to keep the player within a 100x100 area.
-- **Collision Box (`GetBounds()`)**: Provides an Axis-Aligned Bounding Box (AABB) used by other classes (like `Map` and `main.cpp`) to handle collisions.
+### 2. `CameraController.cpp` & `CameraController.h`
+Encapsulates 3D camera modes and controls.
+- **Third-Person Mouse Orbit**: Uses mouse delta movement to rotate camera yaw and pitch smoothly around the player.
+- **Strategic View (`KEY_T`)**: Toggles a high-angle strategic view looking down at the player, allowing manual camera panning using arrow keys.
+- **Camera Reset (`KEY_R`)**: Resets camera and player position.
 
-### 3. `Map.cpp` & `Map.h`
-These files define the `Map` class, responsible for the 3D environment layout and terrain collisions.
-- **Blocks System**: The map is constructed from three types of modular 3D blocks (`BLOCK_LONG`, `BLOCK_SLOPE`, `BLOCK_TALL`). It loads the respective `.obj` models and applies a shared colormap texture.
-- **Level Design**: The constructor manually places blocks to build a level featuring flat ground, ramps, and elevated platforms supported by taller blocks.
-- **Collision Handling (`HandleCollisions()`)**: 
-  - Iterates through all blocks in the map and checks for AABB collisions with the player's bounding box.
-  - If a collision occurs while the player is falling (negative Y velocity) and they are above the block, it snaps the player to the top of the block, enabling them to walk on it.
-  - Otherwise, it acts as a wall, preventing the player from walking through the sides of the blocks by reverting their X and Z positions to the previous frame.
+### 3. `Player.cpp` & `Player.h`
+Defines the `Player` class, managing character movement, physics, leveling, and rendering.
+- **Camera-Relative Movement**: Moves WASD in the direction the camera is currently facing using `cameraYaw` trigonometry.
+- **Dash Skill (`Left Shift`)**: Rapid forward dash burst with a 2.0s cooldown timer.
+- **Leveling & Experience System**:
+  - Accumulates EXP from collecting 3D boxes.
+  - Automatically levels up when reaching `maxExp`, rewarding `levelPoints` for future skill choices.
+  - Tracks upgrade multipliers (`moveSpeedMultiplier`, `dashCooldownMultiplier`).
+- **Physics & Jumping**: Smooth gravity, grounded detection, and jumping (`SPACE`) that works both on the ground plane and on elevated parkour platforms.
+
+### 4. `Collectible.cpp` & `Collectible.h`
+Object-oriented class managing 3D experience boxes.
+- **Visual Effects**: 3D cube rotation animation and vertical sine-wave floating oscillation.
+- **AABB Collision**: Provides `GetBounds()` for automatic pickup when touched by the player.
+- **Dynamic Respawning**: Implements `Respawn(newPos)` to re-populate collected boxes at random parkour coordinates across the map.
+
+### 5. `Map.cpp` & `Map.h`
+Defines the `Map` class, managing 3D terrain blocks and collision resolution.
+- **Parkour Environment**: Multi-tiered layout constructed from modular `BLOCK_LONG` and `BLOCK_TALL` 3D OBJ models.
+- **Collision Handling (`HandleCollisions()`)**:
+  - Checks Axis-Aligned Bounding Box (AABB) overlap between player and map blocks.
+  - Includes a step allowance (`stepAllowance = 0.5f`) enabling players to jump onto and walk across elevated platforms smoothly.
+  - Applies horizontal wall pushback for side collisions and head-bump checks for under-block impacts.
