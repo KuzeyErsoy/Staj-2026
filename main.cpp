@@ -7,6 +7,14 @@
 
 #define MAX_BOXES 20
 
+Vector3 GetRandomCollectiblePos() {
+  float x = (float)GetRandomValue(-25, 28);
+  float z = (float)GetRandomValue(-25, 28);
+  float heights[] = { 0.75f, 2.75f, 4.75f, 6.75f, 8.75f, 10.75f };
+  float y = heights[GetRandomValue(0, 5)];
+  return (Vector3){ x, y, z };
+}
+
 int main() {
   InitWindow(800, 800, "Tactical Radar");
   SetTargetFPS(60);
@@ -17,9 +25,7 @@ int main() {
 
   std::vector<Collectible> boxes;
   for (int i = 0; i < MAX_BOXES; i++) {
-    Vector3 pos = {(float)GetRandomValue(-20, 20), 0.75f,
-                   (float)GetRandomValue(-20, 20)};
-    boxes.push_back(Collectible(pos));
+    boxes.push_back(Collectible(GetRandomCollectiblePos()));
   }
 
   DisableCursor();
@@ -32,12 +38,24 @@ int main() {
 
     // Update collectibles & handle collisions
     BoundingBox playerBounds = player.GetBounds();
+    int activeCount = 0;
     for (auto &box : boxes) {
       if (box.active) {
         box.Update();
         if (CheckCollisionBoxes(playerBounds, box.GetBounds())) {
           box.active = false;
           player.AddExp(10);
+        } else {
+          activeCount++;
+        }
+      }
+    }
+
+    // Dynamic Respawn Wave: Keep collectibles spawning as player collects them
+    if (activeCount <= 5) {
+      for (auto &box : boxes) {
+        if (!box.active) {
+          box.Respawn(GetRandomCollectiblePos());
         }
       }
     }
@@ -58,6 +76,12 @@ int main() {
     }
     EndMode3D();
 
+    // 2D UI - Level & Stats Overlay
+    DrawText(TextFormat("LEVEL: %d", player.level), 20, 20, 26, DARKGREEN);
+    if (player.levelPoints > 0) {
+      DrawText(TextFormat("LEVEL POINT: %d", player.levelPoints), 20, 52, 24, GOLD);
+    }
+
     // 2D UI - EXP Bar at Bottom
     int barWidth = 600;
     int barHeight = 25;
@@ -75,7 +99,7 @@ int main() {
     DrawRectangle(barX, barY, fillWidth, barHeight, GOLD);
     DrawRectangleLines(barX, barY, barWidth, barHeight, ORANGE);
     DrawText(TextFormat("EXP: %d / %d", player.exp, player.maxExp),
-             barX + barWidth / 2 - 50, barY + 4, 18, DARKBLUE);
+             barX + barWidth / 2 - 60, barY + 4, 18, DARKBLUE);
 
     // Controls Help Menu
     if (IsKeyDown(KEY_H)) {

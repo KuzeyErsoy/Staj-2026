@@ -42,6 +42,13 @@ void Collectible::Draw() {
     rlPopMatrix();
 }
 
+void Collectible::Respawn(Vector3 newPos) {
+    basePosition = newPos;
+    position = newPos;
+    active = true;
+    rotationAngle = (float)GetRandomValue(0, 360);
+}
+
 BoundingBox Collectible::GetBounds() const {
     float halfSize = size / 2.0f;
     return (BoundingBox){

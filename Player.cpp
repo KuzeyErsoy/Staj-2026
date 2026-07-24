@@ -14,6 +14,10 @@ Player::Player(Vector3 startPos) {
   dashDirection = (Vector3){0.0f, 0.0f, 0.0f};
   exp = 0;
   maxExp = 100;
+  level = 1;
+  levelPoints = 0;
+  moveSpeedMultiplier = 1.0f;
+  dashCooldownMultiplier = 1.0f;
 
   model = LoadModel("../resources/character/character-a.obj");
   texture = LoadTexture("../resources/character/texture-a.png");
@@ -46,7 +50,7 @@ void Player::Update(float cameraYaw) {
   if (IsKeyPressed(KEY_LEFT_SHIFT) && !isDashing && dashCooldownTimer <= 0.0f) {
     isDashing = true;
     dashTimer = 0.2f;
-    dashCooldownTimer = 2.0f;
+    dashCooldownTimer = 2.0f * dashCooldownMultiplier;
 
     float rad = rotationAngle * (PI / 180.0f);
     dashDirection.x = sinf(rad);
@@ -80,7 +84,7 @@ void Player::Update(float cameraYaw) {
       inputDir.x /= length;
       inputDir.z /= length;
 
-      float speed = 0.5f;
+      float speed = 0.5f * moveSpeedMultiplier;
       float sinYaw = sinf(cameraYaw);
       float cosYaw = cosf(cameraYaw);
 
@@ -99,7 +103,15 @@ void Player::Update(float cameraYaw) {
   }
 
   // Gravity and Jumping
-  velocity.y -= 0.05f;
+  if (IsKeyPressed(KEY_SPACE) && isGrounded) {
+    velocity.y = 0.8f;
+    isGrounded = false;
+  }
+
+  if (!isGrounded) {
+    velocity.y -= 0.04f;
+  }
+
   position.y += velocity.y;
 
   // Basic Floor Collision
@@ -107,13 +119,6 @@ void Player::Update(float cameraYaw) {
     position.y = 0.0f;
     velocity.y = 0.0f;
     isGrounded = true;
-  } else {
-    isGrounded = false;
-  }
-
-  if (IsKeyPressed(KEY_SPACE) && isGrounded) {
-    velocity.y = 1.0f;
-    isGrounded = false;
   }
 
   // Boundaries
@@ -140,7 +145,28 @@ BoundingBox Player::GetBounds() {
 
 void Player::AddExp(int amount) {
   exp += amount;
-  if (exp > maxExp) {
-    exp = maxExp;
+  while (exp >= maxExp) {
+    exp -= maxExp;
+    level++;
+    levelPoints++;
+    maxExp = level * 100;
   }
+}
+
+bool Player::UpgradeSpeed() {
+  if (levelPoints > 0) {
+    levelPoints--;
+    moveSpeedMultiplier += 0.15f;
+    return true;
+  }
+  return false;
+}
+
+bool Player::UpgradeDash() {
+  if (levelPoints > 0) {
+    levelPoints--;
+    dashCooldownMultiplier *= 0.8f;
+    return true;
+  }
+  return false;
 }

@@ -15,7 +15,13 @@ public:
     
     int exp;
     int maxExp;
-    
+    int level;
+    int levelPoints;
+
+    // Skill & stat modifiers for future skill selection
+    float moveSpeedMultiplier;
+    float dashCooldownMultiplier;
+
     Player(Vector3 startPos);
     ~Player(); 
 
@@ -23,6 +29,9 @@ public:
     void Draw();
     BoundingBox GetBounds();
     void AddExp(int amount);
+    bool HasLevelPoints() const { return levelPoints > 0; }
+    bool UpgradeSpeed();
+    bool UpgradeDash();
 
 private:
     Model model;

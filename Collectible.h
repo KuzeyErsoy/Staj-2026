@@ -16,5 +16,6 @@ public:
 
     void Update();
     void Draw();
+    void Respawn(Vector3 newPos);
     BoundingBox GetBounds() const;
 };

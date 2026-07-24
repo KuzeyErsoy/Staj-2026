@@ -5,7 +5,6 @@
 
 enum BlockType {
     BLOCK_LONG,
-    BLOCK_SLOPE,
     BLOCK_TALL
 };
 
@@ -25,7 +24,6 @@ public:
 
 private:
     Model modelLong;
-    Model modelSlope;
     Model modelTall;
 
     Texture2D texturePalette;
