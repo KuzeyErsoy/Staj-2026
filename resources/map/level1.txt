@@ -1,0 +1,21 @@
+# Level 1 Map Grid Configuration
+# Legend:
+# L  = Long Block at Ground level (Y = 0.0)
+# L1 = Long Block at Tier 1 (Y = 2.0, supported by Tall block underneath)
+# L2 = Long Block at Tier 2 (Y = 4.0, supported by Tall blocks)
+# L3 = Long Block at Tier 3 (Y = 6.0, supported by Tall blocks)
+# L4 = Long Block at Summit (Y = 8.0, supported by Tall blocks)
+# T  = Tall Support Block (Y = 0.0)
+# T2 = Tall Support Tower 2-high
+# T3 = Tall Support Tower 3-high
+# .  = Empty Space
+
+L4   L4   L4   .    .    .    T3   T3   T3   L3
+L3   .    L4   .    .    .    T3   L3   .    .
+.    .    L2   L2   L2   .    T2   .    .    .
+.    .    .    .    L2   .    T1   .    L1   L1
+L    L    L    .    L1   .    .    .    L    L
+L    L1   L    .    L1   L1   .    .    L    L
+.    .    .    .    .    .    .    .    .    .
+T2   T2   .    .    L2   L2   L2   .    T3   T3
+T3   L3   .    .    .    .    L2   .    T3   L4

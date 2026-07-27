@@ -2,6 +2,7 @@
 #include "raylib.h"
 #include "Player.h"
 #include <vector>
+#include <string>
 
 enum BlockType {
     BLOCK_LONG,
@@ -19,8 +20,12 @@ public:
     Map();
     ~Map();
 
+    bool LoadLevelFromFile(const std::string& filepath);
+    void ClearMap();
     void Draw();
     void HandleCollisions(Player& player);
+
+    const std::vector<Block>& GetBlocks() const { return blocks; }
 
 private:
     Model modelLong;

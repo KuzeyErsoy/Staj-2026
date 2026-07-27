@@ -1,95 +1,87 @@
 #include "Map.h"
 #include "raymath.h"
+#include <fstream>
+#include <sstream>
+#include <iostream>
+#include <cctype>
 
 Map::Map() {
-    modelLong = LoadModel("../resources/map/block-grass-overhang-long.obj");
-    modelTall = LoadModel("../resources/map/block-grass-large-tall.obj");
-
-    texturePalette = LoadTexture("../resources/map/colormap.png");
+    if (FileExists("resources/map/block-grass-overhang-long.obj")) {
+        modelLong = LoadModel("resources/map/block-grass-overhang-long.obj");
+        modelTall = LoadModel("resources/map/block-grass-large-tall.obj");
+        texturePalette = LoadTexture("resources/map/colormap.png");
+    } else {
+        modelLong = LoadModel("../resources/map/block-grass-overhang-long.obj");
+        modelTall = LoadModel("../resources/map/block-grass-large-tall.obj");
+        texturePalette = LoadTexture("../resources/map/colormap.png");
+    }
 
     if (modelLong.meshCount > 0) modelLong.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = texturePalette;
     if (modelTall.meshCount > 0) modelTall.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = texturePalette;
 
-    // --- Ground & Spawn Area (Y = 0.0f) ---
-    AddBlock((Vector3){ 10.0f, 0.0f, 0.0f }, BLOCK_LONG);
-    AddBlock((Vector3){ 5.0f, 0.0f, 0.0f }, BLOCK_LONG);
-    AddBlock((Vector3){ 15.0f, 0.0f, 0.0f }, BLOCK_LONG);
-    AddBlock((Vector3){ 10.0f, 0.0f, 5.0f }, BLOCK_LONG);
-    AddBlock((Vector3){ 10.0f, 0.0f, -5.0f }, BLOCK_LONG);
+    if (!LoadLevelFromFile("resources/map/level1.txt")) {
+        LoadLevelFromFile("../resources/map/level1.txt");
+    }
+}
 
-    // --- Tier 1 Parkour Steps (Y = 2.0f) ---
-    // North Route
-    AddBlock((Vector3){ 10.0f, 0.0f, -12.0f }, BLOCK_TALL);
-    AddBlock((Vector3){ 10.0f, 2.0f, -12.0f }, BLOCK_LONG);
+void Map::ClearMap() {
+    blocks.clear();
+}
 
-    AddBlock((Vector3){ 10.0f, 0.0f, -20.0f }, BLOCK_TALL);
-    AddBlock((Vector3){ 10.0f, 2.0f, -20.0f }, BLOCK_LONG);
+bool Map::LoadLevelFromFile(const std::string& filepath) {
+    std::ifstream file(filepath);
+    if (!file.is_open()) {
+        TraceLog(LOG_WARNING, "MAP: Could not open level file '%s'", filepath.c_str());
+        return false;
+    }
 
-    AddBlock((Vector3){ 2.0f, 0.0f, -20.0f }, BLOCK_TALL);
-    AddBlock((Vector3){ 2.0f, 2.0f, -20.0f }, BLOCK_LONG);
+    ClearMap();
 
-    AddBlock((Vector3){ -6.0f, 0.0f, -20.0f }, BLOCK_TALL);
-    AddBlock((Vector3){ -6.0f, 2.0f, -20.0f }, BLOCK_LONG);
+    std::string line;
+    int row = 0;
+    const float blockSize = 5.0f;
 
-    // East Route
-    AddBlock((Vector3){ 22.0f, 0.0f, 0.0f }, BLOCK_TALL);
-    AddBlock((Vector3){ 22.0f, 2.0f, 0.0f }, BLOCK_LONG);
+    while (std::getline(file, line)) {
+        if (line.empty() || line[0] == '#') continue;
 
-    AddBlock((Vector3){ 30.0f, 0.0f, 0.0f }, BLOCK_TALL);
-    AddBlock((Vector3){ 30.0f, 2.0f, 0.0f }, BLOCK_LONG);
+        std::stringstream ss(line);
+        std::string token;
+        int col = 0;
 
-    AddBlock((Vector3){ 30.0f, 0.0f, 10.0f }, BLOCK_TALL);
-    AddBlock((Vector3){ 30.0f, 2.0f, 10.0f }, BLOCK_LONG);
+        while (ss >> token) {
+            if (token == ".") {
+                col++;
+                continue;
+            }
 
-    // --- Tier 2 Mid Parkour Steps (Y = 4.0f) ---
-    // North-West Section
-    AddBlock((Vector3){ -14.0f, 0.0f, -20.0f }, BLOCK_TALL);
-    AddBlock((Vector3){ -14.0f, 2.0f, -20.0f }, BLOCK_TALL);
-    AddBlock((Vector3){ -14.0f, 4.0f, -20.0f }, BLOCK_LONG);
+            float x = (col - 4) * blockSize;
+            float z = (row - 4) * blockSize;
 
-    AddBlock((Vector3){ -22.0f, 0.0f, -20.0f }, BLOCK_TALL);
-    AddBlock((Vector3){ -22.0f, 2.0f, -20.0f }, BLOCK_TALL);
-    AddBlock((Vector3){ -22.0f, 4.0f, -20.0f }, BLOCK_LONG);
+            char typeChar = token[0];
+            int height = 0;
+            if (token.length() > 1 && std::isdigit(token[1])) {
+                height = token[1] - '0';
+            }
 
-    AddBlock((Vector3){ -22.0f, 0.0f, -12.0f }, BLOCK_TALL);
-    AddBlock((Vector3){ -22.0f, 2.0f, -12.0f }, BLOCK_TALL);
-    AddBlock((Vector3){ -22.0f, 4.0f, -12.0f }, BLOCK_LONG);
+            if (typeChar == 'L') {
+                for (int h = 0; h < height; ++h) {
+                    AddBlock((Vector3){ x, h * 2.0f, z }, BLOCK_TALL);
+                }
+                AddBlock((Vector3){ x, height * 2.0f, z }, BLOCK_LONG);
+            } else if (typeChar == 'T') {
+                int totalTall = (height == 0) ? 1 : height;
+                for (int h = 0; h < totalTall; ++h) {
+                    AddBlock((Vector3){ x, h * 2.0f, z }, BLOCK_TALL);
+                }
+            }
 
-    // East-South Section
-    AddBlock((Vector3){ 30.0f, 0.0f, 20.0f }, BLOCK_TALL);
-    AddBlock((Vector3){ 30.0f, 2.0f, 20.0f }, BLOCK_TALL);
-    AddBlock((Vector3){ 30.0f, 4.0f, 20.0f }, BLOCK_LONG);
+            col++;
+        }
+        row++;
+    }
 
-    AddBlock((Vector3){ 22.0f, 0.0f, 28.0f }, BLOCK_TALL);
-    AddBlock((Vector3){ 22.0f, 2.0f, 28.0f }, BLOCK_TALL);
-    AddBlock((Vector3){ 22.0f, 4.0f, 28.0f }, BLOCK_LONG);
-
-    // --- Tier 3 High Towers & Sky Bridges (Y = 6.0f & Y = 8.0f) ---
-    // High Tower West (Y = 6.0f -> 8.0f)
-    AddBlock((Vector3){ -22.0f, 0.0f, -4.0f }, BLOCK_TALL);
-    AddBlock((Vector3){ -22.0f, 2.0f, -4.0f }, BLOCK_TALL);
-    AddBlock((Vector3){ -22.0f, 4.0f, -4.0f }, BLOCK_TALL);
-    AddBlock((Vector3){ -22.0f, 6.0f, -4.0f }, BLOCK_LONG);
-
-    AddBlock((Vector3){ -22.0f, 0.0f, 4.0f }, BLOCK_TALL);
-    AddBlock((Vector3){ -22.0f, 2.0f, 4.0f }, BLOCK_TALL);
-    AddBlock((Vector3){ -22.0f, 4.0f, 4.0f }, BLOCK_TALL);
-    AddBlock((Vector3){ -22.0f, 6.0f, 4.0f }, BLOCK_TALL);
-    AddBlock((Vector3){ -22.0f, 8.0f, 4.0f }, BLOCK_LONG);
-
-    // High Tower South-East Summit (Y = 8.0f -> 10.0f)
-    AddBlock((Vector3){ 14.0f, 0.0f, 28.0f }, BLOCK_TALL);
-    AddBlock((Vector3){ 14.0f, 2.0f, 28.0f }, BLOCK_TALL);
-    AddBlock((Vector3){ 14.0f, 4.0f, 28.0f }, BLOCK_TALL);
-    AddBlock((Vector3){ 14.0f, 6.0f, 28.0f }, BLOCK_TALL);
-    AddBlock((Vector3){ 14.0f, 8.0f, 28.0f }, BLOCK_LONG);
-
-    AddBlock((Vector3){ 6.0f, 0.0f, 28.0f }, BLOCK_TALL);
-    AddBlock((Vector3){ 6.0f, 2.0f, 28.0f }, BLOCK_TALL);
-    AddBlock((Vector3){ 6.0f, 4.0f, 28.0f }, BLOCK_TALL);
-    AddBlock((Vector3){ 6.0f, 6.0f, 28.0f }, BLOCK_TALL);
-    AddBlock((Vector3){ 6.0f, 8.0f, 28.0f }, BLOCK_TALL);
-    AddBlock((Vector3){ 6.0f, 10.0f, 28.0f }, BLOCK_LONG);
+    TraceLog(LOG_INFO, "MAP: Successfully loaded %d blocks from level file '%s'", (int)blocks.size(), filepath.c_str());
+    return true;
 }
 
 Map::~Map() {
