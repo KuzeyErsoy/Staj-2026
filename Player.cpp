@@ -1,4 +1,5 @@
 #include "Player.h"
+#include "AudioManager.h"
 #include <math.h>
 
 Player::Player(Vector3 startPos) {
@@ -12,6 +13,17 @@ Player::Player(Vector3 startPos) {
   dashTimer = 0.0f;
   dashCooldownTimer = 0.0f;
   dashDirection = (Vector3){0.0f, 0.0f, 0.0f};
+  
+  hp = 100;
+  maxHp = 100;
+  invincibilityTimer = 0.0f;
+
+  jumpCount = 0;
+  maxJumps = 1;
+  hasDoubleJump = false;
+  hasWallJump = false;
+  isWallSliding = false;
+
   exp = 0;
   maxExp = 100;
   level = 1;
@@ -36,6 +48,10 @@ void Player::Update(float cameraYaw) {
   prevPosition = position;
   float dt = GetFrameTime();
 
+  if (invincibilityTimer > 0.0f) {
+    invincibilityTimer -= dt;
+  }
+
   if (dashCooldownTimer > 0.0f) {
     dashCooldownTimer -= dt;
   }
@@ -55,6 +71,8 @@ void Player::Update(float cameraYaw) {
     float rad = rotationAngle * (PI / 180.0f);
     dashDirection.x = sinf(rad);
     dashDirection.z = cosf(rad);
+
+    AudioManager::Instance().PlayDash();
   }
 
   // Movement Inputs
@@ -102,10 +120,18 @@ void Player::Update(float cameraYaw) {
     }
   }
 
-  // Gravity and Jumping
-  if (IsKeyPressed(KEY_SPACE) && isGrounded) {
-    velocity.y = 0.8f;
-    isGrounded = false;
+  // Gravity and Jumping (Support Double Jump)
+  if (isGrounded) {
+    jumpCount = 0;
+  }
+
+  if (IsKeyPressed(KEY_SPACE)) {
+    if (isGrounded || (hasDoubleJump && jumpCount < maxJumps)) {
+      velocity.y = 0.85f;
+      isGrounded = false;
+      jumpCount++;
+      AudioManager::Instance().PlayJump();
+    }
   }
 
   if (!isGrounded) {
@@ -119,22 +145,27 @@ void Player::Update(float cameraYaw) {
     position.y = 0.0f;
     velocity.y = 0.0f;
     isGrounded = true;
+    jumpCount = 0;
   }
 
-  // Boundaries
-  if (position.x < -50.0f)
-    position.x = -50.0f;
-  if (position.x > 50.0f)
-    position.x = 50.0f;
-  if (position.z < -50.0f)
-    position.z = -50.0f;
-  if (position.z > 50.0f)
-    position.z = 50.0f;
+  // Map Boundaries
+  if (position.x < -50.0f) position.x = -50.0f;
+  if (position.x > 50.0f)  position.x = 50.0f;
+  if (position.z < -50.0f) position.z = -50.0f;
+  if (position.z > 50.0f)  position.z = 50.0f;
 }
 
 void Player::Draw() {
+  // Invincibility flash effect
+  Color tint = WHITE;
+  if (invincibilityTimer > 0.0f) {
+    if ((int)(invincibilityTimer * 20.0f) % 2 == 0) {
+      tint = RED;
+    }
+  }
+
   DrawModelEx(model, position, (Vector3){0.0f, 1.0f, 0.0f}, rotationAngle,
-              scale, WHITE);
+              scale, tint);
 }
 
 BoundingBox Player::GetBounds() {
@@ -150,7 +181,23 @@ void Player::AddExp(int amount) {
     level++;
     levelPoints++;
     maxExp = level * 100;
+    AudioManager::Instance().PlayLevelUp();
   }
+}
+
+bool Player::TakeDamage(int dmg) {
+  if (invincibilityTimer > 0.0f) return false;
+
+  hp -= dmg;
+  if (hp < 0) hp = 0;
+  invincibilityTimer = 1.0f;
+  AudioManager::Instance().PlayHurt();
+  return true;
+}
+
+void Player::Heal(int amount) {
+  hp += amount;
+  if (hp > maxHp) hp = maxHp;
 }
 
 bool Player::UpgradeSpeed() {
@@ -166,6 +213,26 @@ bool Player::UpgradeDash() {
   if (levelPoints > 0) {
     levelPoints--;
     dashCooldownMultiplier *= 0.8f;
+    return true;
+  }
+  return false;
+}
+
+bool Player::UpgradeDoubleJump() {
+  if (levelPoints > 0 && !hasDoubleJump) {
+    levelPoints--;
+    hasDoubleJump = true;
+    maxJumps = 2;
+    return true;
+  }
+  return false;
+}
+
+bool Player::UpgradeMaxHP() {
+  if (levelPoints > 0) {
+    levelPoints--;
+    maxHp += 25;
+    hp += 25;
     return true;
   }
   return false;

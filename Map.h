@@ -6,8 +6,10 @@
 
 enum BlockType {
     BLOCK_LONG,
-    BLOCK_TALL
+    BLOCK_TALL,
+    BLOCK_HAZARD
 };
+
 
 struct Block {
     Vector3 position;

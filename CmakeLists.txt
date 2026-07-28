@@ -8,7 +8,19 @@ set(BUILD_TESTS OFF CACHE BOOL "" FORCE)
 
 add_subdirectory(thirdparty/raylib)
 
-add_executable(${PROJECT_NAME} main.cpp Player.cpp Map.cpp CameraController.cpp Collectible.cpp Radar.cpp)
+add_executable(${PROJECT_NAME}
+    main.cpp
+    Player.cpp
+    Map.cpp
+    CameraController.cpp
+    Collectible.cpp
+    Radar.cpp
+    ParticleSystem.cpp
+    AudioManager.cpp
+    Enemy.cpp
+    SaveSystem.cpp
+)
+
 
 target_link_libraries(${PROJECT_NAME} PRIVATE raylib)
 

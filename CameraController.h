@@ -14,9 +14,16 @@ public:
   float mouseSensitivity;
   bool isStrategicView;
 
+  // Camera Juice: Shake & Dynamic FOV
+  float shakeTimer;
+  float shakeIntensity;
+  float targetFov;
+
   CameraController();
   void Update(Player &player);
   void Reset(Player &player);
+  void TriggerShake(float intensity, float duration);
   Camera3D GetCamera() const { return camera; }
   float GetYaw() const { return cameraYaw; }
 };
+

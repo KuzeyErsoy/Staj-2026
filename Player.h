@@ -1,6 +1,7 @@
 #pragma once
 #include "raylib.h"
 
+
 class Player {
 public:
     Vector3 position;
@@ -13,12 +14,24 @@ public:
     float dashCooldownTimer;
     Vector3 dashDirection;
     
+    // Health & Invincibility
+    int hp;
+    int maxHp;
+    float invincibilityTimer;
+
+    // Movement & Skill Progression
+    int jumpCount;
+    int maxJumps;
+    bool hasDoubleJump;
+    bool hasWallJump;
+    bool isWallSliding;
+
     int exp;
     int maxExp;
     int level;
     int levelPoints;
 
-    // Skill & stat modifiers for future skill selection
+    // Skill & stat modifiers
     float moveSpeedMultiplier;
     float dashCooldownMultiplier;
 
@@ -29,9 +42,14 @@ public:
     void Draw();
     BoundingBox GetBounds();
     void AddExp(int amount);
+    bool TakeDamage(int dmg);
+    void Heal(int amount);
+
     bool HasLevelPoints() const { return levelPoints > 0; }
     bool UpgradeSpeed();
     bool UpgradeDash();
+    bool UpgradeDoubleJump();
+    bool UpgradeMaxHP();
 
 private:
     Model model;

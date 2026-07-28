@@ -1,0 +1,16 @@
+# Level 3 Map Grid Configuration - The Gauntlet Summit
+# Legend:
+# L, L1, L2, L3, L4 = Long Blocks with height tiers
+# T, T1, T2, T3 = Tall Blocks
+# H = Red Hazard/Spike Block
+# . = Empty Space
+
+L4   L4   L4   H    L4   L4   T3   T3   T3   L4
+L4   H    L4   .    L3   H    T3   L4   H    L4
+H    .    L3   L3   L3   .    T3   .    .    H
+.    .    .    H    L3   H    T2   .    L2   L2
+L1   L1   L1   .    L2   .    H    .    L1   L1
+L    L1   L    .    L2   L2   .    H    L    L
+H    H    .    .    H    .    .    .    H    H
+T3   T3   H    .    L3   L3   L3   H    T3   T3
+T3   L4   .    H    .    .    L4   .    T3   L4

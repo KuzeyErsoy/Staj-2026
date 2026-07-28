@@ -2,6 +2,7 @@
 #include "raylib.h"
 #include "Player.h"
 #include "Collectible.h"
+#include "Enemy.h"
 #include <vector>
 
 class Radar {
@@ -9,7 +10,7 @@ public:
     Radar(int centerX = 690, int centerY = 110, float radius = 80.0f, float worldRadius = 40.0f);
     ~Radar();
 
-    void Draw(const Player& player, const std::vector<Collectible>& collectibles, float cameraYaw);
+    void Draw(const Player& player, const std::vector<Collectible>& collectibles, const std::vector<Enemy>& enemies, float cameraYaw);
 
 private:
     int centerX;
@@ -17,3 +18,4 @@ private:
     float radius;
     float worldRadius;
 };
+

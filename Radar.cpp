@@ -7,7 +7,7 @@ Radar::Radar(int centerX, int centerY, float radius, float worldRadius)
 
 Radar::~Radar() {}
 
-void Radar::Draw(const Player& player, const std::vector<Collectible>& collectibles, float cameraYaw) {
+void Radar::Draw(const Player& player, const std::vector<Collectible>& collectibles, const std::vector<Enemy>& enemies, float cameraYaw) {
     int screenWidth = GetScreenWidth();
     int currentCenterX = screenWidth - (int)radius - 20;
     int currentCenterY = (int)radius + 20;
@@ -39,7 +39,6 @@ void Radar::Draw(const Player& player, const std::vector<Collectible>& collectib
 
         float dist = sqrtf(relX * relX + relZ * relZ);
         if (dist > radius - 6.0f) {
-            // Clamp blip to radar edge
             relX = (relX / dist) * (radius - 6.0f);
             relZ = (relZ / dist) * (radius - 6.0f);
         }
@@ -49,6 +48,30 @@ void Radar::Draw(const Player& player, const std::vector<Collectible>& collectib
 
         DrawCircle(blipX, blipY, 3.5f, GOLD);
         DrawCircleLines(blipX, blipY, 4.5f, Fade(YELLOW, 0.8f));
+    }
+
+    // Render Enemies as blinking red dots
+    float timeVal = GetTime();
+    for (const auto& e : enemies) {
+        float relX = (e.position.x / worldRadius) * radius;
+        float relZ = (e.position.z / worldRadius) * radius;
+
+        float dist = sqrtf(relX * relX + relZ * relZ);
+        if (dist > radius - 6.0f) {
+            relX = (relX / dist) * (radius - 6.0f);
+            relZ = (relZ / dist) * (radius - 6.0f);
+        }
+
+        int blipX = currentCenterX + (int)relX;
+        int blipY = currentCenterY + (int)relZ;
+
+        Color blipCol = RED;
+        if (e.state == ENEMY_CHASE) {
+            blipCol = ((int)(timeVal * 8.0f) % 2 == 0) ? RED : ORANGE;
+        }
+
+        DrawCircle(blipX, blipY, 4.0f, blipCol);
+        DrawCircleLines(blipX, blipY, 5.0f, MAROON);
     }
 
     // Render Player Dot
@@ -73,3 +96,4 @@ void Radar::Draw(const Player& player, const std::vector<Collectible>& collectib
     DrawCircle(pBlipX, pBlipY, 4.5f, SKYBLUE);
     DrawCircleLines(pBlipX, pBlipY, 5.5f, BLUE);
 }
+
