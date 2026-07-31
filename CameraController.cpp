@@ -1,4 +1,6 @@
 #include "CameraController.h"
+#include "Drone.h"
+#include "raymath.h"
 #include <stdlib.h>
 
 CameraController::CameraController() {
@@ -28,16 +30,38 @@ void CameraController::TriggerShake(float intensity, float duration) {
     shakeTimer = duration;
 }
 
-void CameraController::Update(Player& player) {
+void CameraController::Update(Player& player, const Drone* drone) {
     float dt = GetFrameTime();
 
     // Reset control
-    if (IsKeyDown(KEY_R)) {
+    if (IsKeyDown(KEY_R) && (!drone || drone->mode != DRONE_MODE_FREE_FLIGHT)) {
         Reset(player);
     }
 
+    // Check if in Drone Free Flight mode
+    if (drone && drone->mode == DRONE_MODE_FREE_FLIGHT) {
+        float radYaw = drone->yaw * DEG2RAD;
+        float radPitch = drone->pitch * DEG2RAD;
+
+        camera.position = (Vector3){
+            drone->position.x - sinf(radYaw) * cosf(radPitch) * 4.0f,
+            drone->position.y + sinf(radPitch) * 4.0f + 0.5f,
+            drone->position.z - cosf(radYaw) * cosf(radPitch) * 4.0f
+        };
+
+        camera.target = (Vector3){
+            drone->position.x + sinf(radYaw) * cosf(radPitch) * 10.0f,
+            drone->position.y - sinf(radPitch) * 10.0f,
+            drone->position.z + cosf(radYaw) * cosf(radPitch) * 10.0f
+        };
+
+        cameraYaw = drone->yaw;
+        camera.fovy = 55.0f;
+        return;
+    }
+
     // Toggle Strategic View
-    if (IsKeyPressed(KEY_T)) {
+    if (IsKeyPressed(KEY_V)) {
         isStrategicView = !isStrategicView;
         if (isStrategicView) {
             camera.position = defaultPosition;
@@ -106,4 +130,3 @@ void CameraController::Reset(Player& player) {
     shakeTimer = 0.0f;
     camera.fovy = 45.0f;
 }
-

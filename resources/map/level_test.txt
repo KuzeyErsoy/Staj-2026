@@ -1,0 +1,11 @@
+# DRONE TEST ARENA MAP LAYOUT
+. . . . . . . . . .
+. L2 . . L2 . . L2 .
+. . . H . . . H . .
+. L1 . T3 T3 T3 . L1 .
+. . H T3 L4 T3 H . .
+. . H T3 L4 T3 H . .
+. L1 . T3 T3 T3 . L1 .
+. . . H . . . H . .
+. L2 . . L2 . . L2 .
+. . . . . . . . . .

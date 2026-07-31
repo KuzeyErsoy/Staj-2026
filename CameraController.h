@@ -3,6 +3,8 @@
 #include "raylib.h"
 #include <math.h>
 
+class Drone;
+
 class CameraController {
 public:
   Camera3D camera;
@@ -20,10 +22,9 @@ public:
   float targetFov;
 
   CameraController();
-  void Update(Player &player);
+  void Update(Player &player, const Drone* drone = nullptr);
   void Reset(Player &player);
   void TriggerShake(float intensity, float duration);
   Camera3D GetCamera() const { return camera; }
   float GetYaw() const { return cameraYaw; }
 };
-

@@ -19,6 +19,7 @@ add_executable(${PROJECT_NAME}
     AudioManager.cpp
     Enemy.cpp
     SaveSystem.cpp
+    Drone.cpp
 )
 
 

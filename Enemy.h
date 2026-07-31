@@ -17,10 +17,14 @@ public:
     float rotationAngle;
     bool isMovingToEnd;
 
+    int hp;
+    int maxHp;
+
     Enemy(Vector3 p1, Vector3 p2, float speed = 3.5f);
     ~Enemy();
 
     void Update(const Player& player, float dt);
     void Draw() const;
     BoundingBox GetBounds() const;
+    bool TakeDamage(int dmg);
 };

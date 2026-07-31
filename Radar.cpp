@@ -1,4 +1,5 @@
 #include "Radar.h"
+#include "Drone.h"
 #include "raymath.h"
 #include <cmath>
 
@@ -7,7 +8,7 @@ Radar::Radar(int centerX, int centerY, float radius, float worldRadius)
 
 Radar::~Radar() {}
 
-void Radar::Draw(const Player& player, const std::vector<Collectible>& collectibles, const std::vector<Enemy>& enemies, float cameraYaw) {
+void Radar::Draw(const Player& player, const std::vector<Collectible>& collectibles, const std::vector<Enemy>& enemies, float cameraYaw, const Drone* drone) {
     int screenWidth = GetScreenWidth();
     int currentCenterX = screenWidth - (int)radius - 20;
     int currentCenterY = (int)radius + 20;
@@ -53,6 +54,8 @@ void Radar::Draw(const Player& player, const std::vector<Collectible>& collectib
     // Render Enemies as blinking red dots
     float timeVal = GetTime();
     for (const auto& e : enemies) {
+        if (e.hp <= 0) continue;
+
         float relX = (e.position.x / worldRadius) * radius;
         float relZ = (e.position.z / worldRadius) * radius;
 
@@ -72,6 +75,25 @@ void Radar::Draw(const Player& player, const std::vector<Collectible>& collectib
 
         DrawCircle(blipX, blipY, 4.0f, blipCol);
         DrawCircleLines(blipX, blipY, 5.0f, MAROON);
+    }
+
+    // Render Drone on Radar if active
+    if (drone) {
+        float dRelX = (drone->position.x / worldRadius) * radius;
+        float dRelZ = (drone->position.z / worldRadius) * radius;
+
+        float dDist = sqrtf(dRelX * dRelX + dRelZ * dRelZ);
+        if (dDist > radius - 6.0f) {
+            dRelX = (dRelX / dDist) * (radius - 6.0f);
+            dRelZ = (dRelZ / dDist) * (radius - 6.0f);
+        }
+
+        int dBlipX = currentCenterX + (int)dRelX;
+        int dBlipY = currentCenterY + (int)dRelZ;
+
+        Color droneCol = (drone->mode == DRONE_MODE_FREE_FLIGHT) ? LIME : MAGENTA;
+        DrawCircle(dBlipX, dBlipY, 4.5f, droneCol);
+        DrawCircleLines(dBlipX, dBlipY, 6.0f, PURPLE);
     }
 
     // Render Player Dot
@@ -96,4 +118,3 @@ void Radar::Draw(const Player& player, const std::vector<Collectible>& collectib
     DrawCircle(pBlipX, pBlipY, 4.5f, SKYBLUE);
     DrawCircleLines(pBlipX, pBlipY, 5.5f, BLUE);
 }
-
