@@ -1,128 +1,121 @@
-# Tactical Radar - 3D Cyber Parkour & Drone Combat Arena
+# Tactical Radar - 3D Cyber Parkour & Military Drone Logistics Simulation
 
-Bu proje, **C++17** ve **raylib** kütüphanesi kullanılarak geliştirilmiş 3D platform, parkour, dinamik 3D drone desteği ve veri odaklı bölüm tasarımına sahip bir aksiyon/toplama (collectathon) oyunudur. Oyuncu, kamera açılarına duyarlı hareket mekanizmaları, dash yeteneği, 2D mini harita (radar), prosedürel ses sentezleme engine'i, çift modlu Drone desteği, düşman yapay zekası, Seviye Atlama / Yetenek Ağacı ve kaydedip yükleme (Save/Load) sistemleriyle donatılmış dinamik bir dünyada mücadele eder.
-
----
-
-## 🎯 Projenin Genel Özellikleri
-
-1. **🛸 Çift Modlu Drone Sistemi (Drone Companion & Recon System)**
-   - **Dinamik 3D Model Yükleyici**: `resources/drone/drone.obj` ve `texture.png` mevcutsa 3D model otomatik olarak yüklenir. Model eklenmemişse sistem çökmez; 4 dönen rotörlü, gövdeli ve parlayan lazer gözlü prosedürel 3D Quadcopter çizer.
-   - **Mod 1: Otomatik Takip & Lazer Saldırısı (`DRONE_MODE_FOLLOW_ATTACK`)**: Drone oyuncuyu smooth LERP fiziği ile takip eder. Menzildeki düşmanlara kilitlenerek kırmızı plazma lazer atışı yapar ve düşmanları imha eder (25 Hasar / atış).
-   - **Mod 2: Serbest Uçuş & Keşif (`DRONE_MODE_FREE_FLIGHT`)**: `E` tuşu ile aktif edilir. Kamera ve kontroller Drone'a geçer. Oyuncu WASD, Space/Shift ve Fare ile 3D haritada serbestçe uçabilir.
-   - **Radar HUD Entegrasyonu**: Drone'un konumu ve aktif modu mini haritada canlı Magenta / Lime renginde görüntülenir.
-
-2. **⚔️ Drone Test Arenası & Sürekli Düşman Spawnerı (`F6` Tuşu)**
-   - Oyuncunun `F6` tuşuna basarak veya menüden erişebileceği özel test haritası (`resources/map/level_test.txt`).
-   - Her 3 saniyede bir otomatik yeni düşman doğuran Spawner mekanizması (drone lazer saldırılarını ve serbest uçuşu test etmek için).
-   - Düşman sağlık barı (`Enemy::hp`) ve 3D uzayda yüzen görsel can göstergesi.
-
-3. **3D Kamera & Karakter Kontrolü**
-   - **Kamera Yönlü Hareket (Camera-Relative WASD)**: Trigonometrik hesaplamalar (`sin/cos`) ile kameranın baktığı açıya (`cameraYaw`) duyarlı hareket mantığı.
-   - **Dash (Atılma) Mekaniği**: `Left Shift` tuşu ile 0.2 saniyelik yüksek hızlı ileri atılma, 2.0 saniye cooldown ve özel parçacık efekti/ekran sarsıntısı.
-   - **Zıplama & Çift Zıplama (Double Jump)**: Yerçekimi, platform çakışma tespiti ve Seviye Atlama ekranından açılabilen çift zıplama yeteneği.
-   - **Dinamik Kamera & Görüş Açısı (Dynamic FOV & Screen Shake)**: Dash esnasında FOV 45°'den 58°'ye esner; hasar alma ve atılma durumlarında ekran sarsıntısı uygulanır. `T` tuşu ile stratejik kuş bakışı görünüm.
-
-4. **Oyun Durum Makinesi (Game State Machine)**
-   - `STATE_MENU`: Ana menü, test arenası kısayolu (`F6`) ve kayıtlı oyun yükleme ekranı (`Enter` ile başlar, `L` ile yükler).
-   - `STATE_PLAYING`: Gerçek zamanlı 3D aksiyon, fizik, drone takibi/uçuşu, düşman yapay zekası ve UI katmanı.
-   - `STATE_LEVEL_UP`: Tecrübe barı dolduğunda oyunu duraklatıp yetenek seçim modalını (`[1] Speed Boost`, `[2] Rapid Dash`, `[3] Double Jump`, `[4] Max HP & Refill`) sunar.
-   - `STATE_GAME_OVER`: Oyuncunun canı sıfırlandığında veya `Y = -15` seviyesinin altına düştüğünde tetiklenir (`R` tuşu ile yeniden başlatma).
-   - `STATE_VICTORY`: Bütün bölümler tamamlandığında açılan zafer ve istatistik ekranı.
-
-5. **Taktiksel Mini Harita (Radar HUD)**
-   - Ekranın sağ üst köşesinde 2D dairesel radar retikülü.
-   - 3D dünya koordinatlarının $(X, Z)$ radar yarıçapına oranlanması (Mapping).
-   - **Oyuncu Göstergesi**: Cyan renkli nokta ve kameranın baktığı yönü gösteren vektör çizgisi (Lime).
-   - **Drone Göstergesi**: Parlayan Magenta (Takip) veya Lime (Serbest Uçuş) renkli özel simge.
-   - **EXP Kutuları**: Parlayan sarı/altın renkli noktalar.
-   - **Düşmanlar**: Devriye modunda kırmızı, takip modunda yanıp sönen kırmızı/turuncu noktalar.
-
-6. **Veri Odaklı Bölüm Tasarımı (Data-Driven Map Loader)**
-   - Metin dosyalarından (`resources/map/level1.txt`, `level2.txt`, `level3.txt`, `level_test.txt`) 3D blok ve engel haritaları yükleme.
-
-7. **Prosedürel Ses Engine'i (Procedural Synth Engine)**
-   - C++ belleğinde `Wave` tamponları ile 8-bit / retro ses sentezleme (Dash, Collect, Jump, Hurt/Laser, LevelUp, Click).
-
-8. **3D Parçacık Sistemi (Particle System & Visual Juice)**
-   - Kutuları toplarken altın/cyan patlamaları, Dash duman izleri, yere iniş tozu ve lazer hasar patlamaları.
-
-9. **Kayıt ve Yükleme Sistemi (Save & Load System)**
-   - `savegame.dat` ikili serileştirme (`F5` Quick Save / `F9` Quick Load).
+Bu proje, **C++17** ve **raylib** kütüphanesi kullanılarak geliştirilmiş 3D platform, parkour, 5-drone'lu askeri otonom filo lojistik simülasyonu ve veri odaklı bölüm tasarımına sahip bir aksiyon/simülasyon oyunudur.
 
 ---
 
-## 🏗 Mimari ve Modül Yapısı
+## 🪖 PART 1: Askeri Drone Filo Simülasyonu & Lojistik Arena (`F7` Modu)
+
+> [!NOTE]
+> **Simülasyon Durumu ve Taslak Yapı (Prototype / Draft Simulation)**
+> Bu askeri filo simülasyonu şu anda temel mantıksal hatları (Recon, Task Force, Support rolleri, FSM durum makineleri, ikmal ve formasyon mekanizmaları) kurulmuş **taslak bir simülasyondur (prototype simulation)**. Gelecek aşamalarda daha fazla drone kapasitesi, sürü zekası ve algoritma/fizik optimizasyonları eklenecektir.
+
+Ana menüden veya oyun içerisinden **`F7` Tuşu** ile erişilen bu mod, 5 otonom askeri drone'un $1000 \times 1000$ metrelik operasyon sahasında yürüttüğü gerçek zamanlı hedef tespiti, taktiksel yelpaze kuşatması, angajman, ikmal ve lojistik koordinasyonunu simüle eder.
+
+### 🛸 5 Drone'lu Otonom Filo ve Görev Rolleri
+
+1. **1x RECON Drone (`Skyblue` - Keşif & Hedef Tespit Unit)**:
+   - Geniş operasyon sahasında ($1000 \times 1000$m) devriye gezerek henüz tespit edilmemiş düşman kümelerini (`UNDETECTED`) arar.
+   - Hedef kümeye yaklaşarak 1.8 saniyelik tarama protokolünü tamamlar, kümenin GPS koordinatlarını ve düşman sayısını merkeze bildirir (`REPORTED`).
+
+2. **3x TASK FORCE Drones (`Orange` - Taktiksel Önleme & Angajman Unitleri)**:
+   - Bildirilen hedef kümelerine intikal eder.
+   - **Taktiksel Yelpaze Kuşatması (Flanking Formation)**: Saldırı esnasında çakışmamak ve birbirini engellememek için hedef etrafında kademeli açılarda ($-40^\circ, 0^\circ, +40^\circ$), farklı mesafelerde ($34\text{m}, 40\text{m}, 46\text{m}$) mevkilenirler.
+   - Hedefteki canlı düşman birimlerine kırmızı plazma lazer ateşler (40 DMG/sn). Yakıt veya mühimmatı %20'nin altına düştüğünde havadan ikmal çağrısı (`REQUESTING_SUPPORT`) yayınlar.
+
+3. **1x SUPPORT Drone (`Lime` - Hava Lojistik & Ağır İkmal Cargo Unit)**:
+   - Sahadaki Task Force drone'larının yakıt/mühimmat durumlarını anlık izler.
+   - İkmal çağrısı yapan drone'a yönelerek onun $6\text{m}$ üstünde ve $5\text{m}$ arkasında formasyon uçuşuna geçer.
+   - Yeşil ikmal tüzük bağı (tether beam) ile havada yakıt (+20/sn) ve mühimmat (+30/sn) aktarır.
+
+### ⚡ Gerçekçi Uçuş Fiziği & Düşman Kaçış Yapay Zekası
+
+- **Askeri Uçuş Fiziği**: İvmeli uçuş vektörü (`velocity`), ivmelenirken burnu öne eğme (`pitch` tilt) ve dönüşlerde yumuşak süzülme dinamikleri.
+- **Boids Anti-Collision**: Drone'ların havada birbiriyle çakışmasını engelleyen 9m yarıçaplı itme kuvveti.
+- **Düşman Panik & Kaçış Yapay Zekası**: Lazer ateşi altına giren veya arkadaşı vurulan düşmanlar panik haline (`panicTimer = 3.0s`) geçerek 7.5 m/s hızla lazer etki alanından kaçışır, zig-zag çizerek siper arar.
+
+### 🎥 İnteraktif Kamera & HUD Kontrolleri
+
+- **`0` veya `C`**: **Serbest Komuta Kamerası (Free Fly Cam)**. `WASD` ile hareket, `Space` / `Ctrl` ile irtifa, `Shift` ile turbo hız, `Fare` ile $360^\circ$ bakış.
+- **`1` .. `5`**: İlgili drone'a kilitlenir. Kilitliyken **Fare Hareketi ile $360^\circ$ etrafı inceleme** imkanı sunar.
+- **`TAB`**: Kameralar arası sırayla geçiş.
+- **`F11`**: Tam Ekran (Fullscreen) modu.
+
+### 🚀 Gelecek Geliştirme Haritası & Optimizasyon Planı (Future Roadmap)
+
+1. **🐝 Sürü Hareketleri (Swarm Intelligence & Dynamics)**:
+   - Reynolds Flocking algoritmaları (Cohesion, Alignment, Separation) entegrasyonu ile drone'ların sürü halinde kolektif karar verip hareket etmesi.
+2. **🛸 Daha Fazla Drone Kapsamı (Multi-Squad Scaling)**:
+   - Filo kapasitesinin 5 drone'dan 20+ drone'a çıkarılarak çoklu filo operasyonlarının simüle edilmesi.
+3. **⚙️ Algoritmalarda Optimizasyon (Algorithmic & Graph Optimizations)**:
+   - **Gelişmiş Hedef Atama**: Hungarian / Munkres algoritması ile drone-hedef eşleştirmelerinin optimize edilmesi.
+   - **3D Yol Bulma (Pathfinding)**: $A^*$ / $RRT^*$ algoritmaları ile karmaşık 3D engeller etrafında dinamik rota planlama.
+4. **💨 Drone Hareketlerinde Optimizasyon (Flight Trajectory Optimization)**:
+   - Bézier / Spline yörünge yumuşatması ile gerçekçi aerodinamik dönüşler.
+   - RVO (Reciprocal Velocity Obstacles) ile anlık engelden kaçınma algoritmaları.
+
+---
+
+## 🏗 PART 2: Proje Mimarisi, Dosya Yapısı & Kod Referansı
+
+### 📁 Yeni Eklenen Modüller ve Dosyalar
+
+- **[DroneSystem.h](file:///Users/kuzeyersoy/Staj26/DroneSystem.h)**: 5-Drone Fleet lojistik mimarisinin `DroneFleet` namespace altında tanımlanan tüm struct (`Drone`, `EnemyCluster`, `Enemy`, `HomeBase`, `TelemetryContext`) ve `DroneSystemManager` sınıf deklarasyonu.
+- **[DroneSystem.cpp](file:///Users/kuzeyersoy/Staj26/DroneSystem.cpp)**: 5-Drone otonom FSM, taktiksel formasyon fiziği, Boids anti-collision, düşman kaçış yapay zekası, $1000 \times 1000$ harita çizimi ve 2D Telemetri HUD render motoru.
+
+### 🧩 Tam Proje Dosya Dizini
 
 ```
 Staj26/
-├── main.cpp                  # Oyun ana döngüsü, durum makinesi, drone entegrasyonu ve UI
-├── Drone.h / .cpp            # Çift modlu Drone (Takip/Saldırı & Serbest Uçuş), Lazer & Model Çizimi
+├── main.cpp                  # Oyun ana döngüsü, durum makinesi (F7 Askeri Sim entegrasyonu)
+├── DroneSystem.h / .cpp       # [YENİ] 5-Drone Otonom Filo, Lojistik, FSM, Formasyon & Telemetri
+├── Drone.h / .cpp            # Oyuncu tekli yardımcısı drone (Takip/Saldırı & Serbest Uçuş)
 ├── Player.h / .cpp           # Oyuncu fiziği, hareket, can, tecrübe ve yetenek yükseltmeleri
-├── CameraController.h / .cpp  # 3D üçüncü şahıs, Drone serbest uçuş kamerası ve sarsıntı
-├── Radar.h / .cpp            # 2D mini harita HUD arayüzü (Oyuncu, Düşman ve Drone blipleri)
-├── Map.h / .cpp              # Veri odaklı seviye yükleyici ve AABB fizik çakışması
-├── Enemy.h / .cpp            # Düşman yapay zekası (Patrol/Chase), Can/Hasar sistemi
-├── Collectible.h / .cpp      # 3D tecrübe kutuları, dönme/süzülme animasyonları
-├── ParticleSystem.h / .cpp   # 3D parçacık efektleri (Lazer patlamaları, dash izleri)
-├── AudioManager.h / .cpp     # Prosedürel ses sentezleme singleton motoru
-├── SaveSystem.h / .cpp       # İkili (binary) oyun kaydetme ve yükleme sistemi
-├── CMakeLists.txt            # Proje cmake yapılandırması
+├── CameraController.h / .cpp  # 3D üçüncü şahıs ve kamera sarsıntı motoru
+├── Radar.h / .cpp            # 2D dairesel mini harita HUD arayüzü
+├── Map.h / .cpp              # Veri odaklı metin tabanlı seviye yükleyici
+├── Enemy.h / .cpp            # Düşman devriye & takip yapay zekası
+├── Collectible.h / .cpp      # 3D tecrübe kutuları
+├── ParticleSystem.h / .cpp   # 3D parçacık efektleri (Lazer, dash, patlamalar)
+├── AudioManager.h / .cpp     # Prosedürel retro ses sentezleme motoru
+├── SaveSystem.h / .cpp       # İkili (binary) oyun kaydetme sistemi
+├── CMakeLists.txt            # Proje derleme yapılandırması
 ├── TODO.md                   # Geliştirme adımları ve tamamlanan aşamalar
-└── resources/
-    ├── character/            # Oyuncu 3D modeli ve kaplaması
-    ├── drone/                # (Opsiyonel) Drone 3D modeli (drone.obj & texture.png)
-    └── map/                  # Metin tabanlı haritalar (level1..3.txt & level_test.txt)
+└── resources/                # 3D modeller ve metin tabanlı haritalar
 ```
 
 ---
 
-## 🧩 Sınıf Sorumlulukları (Detailed Class Reference)
-
-### 1. `Drone` ([Drone.h](file:///Users/kuzeyersoy/Staj26/Drone.h) / [Drone.cpp](file:///Users/kuzeyersoy/Staj26/Drone.cpp))
-- **İşlevi**: Drone yardımcısı ve keşif birimi.
-- **Özellikler**: 3D model yükleme (`resources/drone/drone.obj`), fallback olarak 4 rotörlü prosedürel Quadcopter çizimi, oyuncuyu LERP ile süzülerek takip etme, otomatik en yakın düşman tespiti ve kırmızı plazma lazer atışları (25 DMG), `E` tuşu ile Serbest Uçuş moduna geçiş.
-
-### 2. `Enemy` ([Enemy.h](file:///Users/kuzeyersoy/Staj26/Enemy.h) / [Enemy.cpp](file:///Users/kuzeyersoy/Staj26/Enemy.cpp))
-- **İşlevi**: Tehlike birimleri.
-- **Özellikler**: Waypoint devriye ve agresif takip yapay zekası, `hp` / `maxHp` takibi, `TakeDamage()` metodu ve baş üzerinde yüzen 3D can barı göstergesi.
-
-### 3. `CameraController` ([CameraController.h](file:///Users/kuzeyersoy/Staj26/CameraController.h) / [CameraController.cpp](file:///Users/kuzeyersoy/Staj26/CameraController.cpp))
-- **İşlevi**: Kamera yönetimi.
-- **Özellikler**: Oyuncu takip kamerası, Drone Serbest Uçuş kamerası görüş açısı bağlamı, `T` tuşu ile Stratejik Üst Açı, smooth FOV ve ekran sarsıntısı.
-
----
-
-## 🎮 Kontroller (Controls)
+## 🎮 Kontroller (Controls Reference)
 
 | Tuş | Eylem |
 | :--- | :--- |
-| **W / A / S / D** | Oyuncu Hareketi / Serbest Uçuşta Drone Yönlendirmesi |
-| **E** | Drone Modunu Değiştir (Otomatik Saldırı ⟷ Serbest Uçuş) |
-| **T** | Drone Test Arenası Haritasına Geçiş Yap (Sürekli Düşman Spawnerı) |
-| **Space** | Zıplama (Oyuncu) / Yukarı Yükselme (Drone Uçuşunda) |
-| **C** veya **Sol Shift** | Aşağı Alçalma (Drone Uçuşunda) / Dash (Oyuncuda) |
-| **Fare Hareketi** | Kamerayı / Drone Bakış Yönünü Döndürme |
-| **V** | Stratejik Kuş Bakışı Kamera Görünümünü Aç/Kapat |
-| **H** | Kontrol Yardım Penceresini Göster (Basılı Tutulurken) |
-| **F5** | Oyunu Hızlı Kaydet (Quick Save) |
-| **F9** | Oyunu Hızlı Yükle (Quick Load) |
-| **1 / 2 / 3 / 4** | Level Up Ekranında Yetenek Seçimi |
-| **R** | Kamerayı Resetleme veya Game Over Durumunda Restart |
-| **Enter** | Menüden Oyuna Başlama / Zafer Ekranında Menüye Dönme |
-| **L** | Menü Ekranında Kayıtlı Oyunu Yükleme |
+| **F7** | **Askeri Drone Filo Simülasyonu Moduna Geçiş Yap** |
+| **F11** | Tam Ekran (Fullscreen) Modunu Aç / Kapat |
+| **1 / 2 / 3 / 4 / 5** | Filo Simülasyonunda İlgili Drone'a Kilitlen (1: Recon, 2-4: Task Force, 5: Support) |
+| **0** veya **C** | Filo Simülasyonunda Serbest Komuta Kamerasına Geçiş Yap |
+| **TAB** | Kameralar Arası Sırayla Geçiş Yap |
+| **Fare Hareketi** | Kamera Görüş Yönünü / Drone Takibinde $360^\circ$ Etrafı İnceleme |
+| **W / A / S / D** | Karakter Hareketi / Serbest Kamerada Haritada Uçuş |
+| **Space** | Zıplama (Oyuncu) / Yükselme (Serbest Kamerada) |
+| **Left Control** | Alçalma (Serbest Kamerada) |
+| **Left Shift** | Dash (Oyuncu) / Turbo Hızlı Uçuş (Serbest Kamerada) |
+| **E** | Ana Oyunda Oyuncu Drone Modunu Değiştir (Saldırı ⟷ Serbest Uçuş) |
+| **T** | Drone Test Arenası Haritasına Geçiş Yap |
+| **F5 / F9** | Oyunu Hızlı Kaydet / Hızlı Yükle |
+| **ESC** | Simülasyondan Ana Menüye Dönüş |
 
 ---
 
 ## 🛠 Derleme ve Çalıştırma (Build & Run)
 
 ```bash
-# 1. Yapılandırma ve Derleme Dosyalarını Oluşturma
+# 1. CMake Yapılandırması
 cmake -B build -S .
 
 # 2. Projeyi Derleme
 cmake --build build
 
-# 3. Oyunu Çalıştırma
+# 3. Çalıştırma
 ./build/Staj26
 ```
