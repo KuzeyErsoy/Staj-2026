@@ -359,6 +359,15 @@ int main() {
     case STATE_FLEET_SIM: {
       fleetManager.UpdateFleetCamera(cameraController.camera, dt);
       fleetManager.Update(dt);
+
+      if (IsKeyPressed(KEY_M)) fleetManager.ToggleFullscreenMap();
+      if (IsKeyPressed(KEY_I)) fleetManager.ToggleDroneInspector();
+      if (IsKeyPressed(KEY_F1)) fleetManager.ToggleTelemetryPanel();
+      if (IsKeyPressed(KEY_F2)) fleetManager.ToggleResourcePanel();
+      if (IsKeyPressed(KEY_F3)) fleetManager.ToggleTerminalPanel();
+      if (IsKeyPressed(KEY_F4)) fleetManager.ToggleCameraBanner();
+      if (IsKeyPressed(KEY_F8)) fleetManager.ToggleAllPanels();
+
       if (IsKeyPressed(KEY_ESCAPE)) {
         AudioManager::Instance().PlayClick();
         currentState = STATE_MENU;

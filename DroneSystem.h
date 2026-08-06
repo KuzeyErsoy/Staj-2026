@@ -71,20 +71,41 @@ struct Drone {
     Vector3 laserTargetPos = { 0, 0, 0 };
     bool isResupplyBeamActive = false;
     Vector3 resupplyTargetPos = { 0, 0, 0 };
+    // Docking & Logs
+    Vector3 baseDockPos = { 0.0f, 0.0f, 0.0f };
+    std::vector<std::string> actionLogs;
+    
+    // Recon Grid Sweep & Rendezvous State
+    int reconSectorIndex = 0;
+    Vector3 currentSweepWaypoint = { 0.0f, 20.0f, 0.0f };
+    Vector3 rendezvousPos = { 0.0f, 0.0f, 0.0f };
+    bool hasRendezvous = false;
+    int assignedSupportId = -1;
+    int servicingReconId = -1;
+
+    void LogAction(const std::string& msg) {
+        int totalSecs = (int)GetTime();
+        int mins = (totalSecs / 60) % 60;
+        int secs = totalSecs % 60;
+        char timeStr[32];
+        snprintf(timeStr, sizeof(timeStr), "[%02d:%02d] ", mins, secs);
+        actionLogs.push_back(std::string(timeStr) + msg);
+        if (actionLogs.size() > 10) actionLogs.erase(actionLogs.begin());
+    }
 };
 
 struct HomeBase {
     Vector3 position = { 0.0f, 0.0f, 0.0f };
-    float radius = 20.0f;
-    float fuelSupply = 9999.0f; // Sınırsız üs stoğu
+    float radius = 25.0f;
+    float fuelSupply = 9999.0f;
     float ammoSupply = 9999.0f;
 };
 
 // HUD ve Terminal Veri Paneli
 struct TelemetryContext {
-    int totalFleetCount = 5;
+    int totalFleetCount = 14;
     int activeInMission = 0;
-    int dockedAtBase = 5;
+    int dockedAtBase = 14;
     
     int knownTargetsMagnitude = 0;
     int eliminatedTargetsCount = 0;
@@ -110,6 +131,26 @@ public:
     int GetActiveCameraMode() const { return activeCameraMode; }
     std::string GetActiveCameraModeName() const;
 
+    // UI Panel Toggles & Inspector
+    void ToggleTelemetryPanel() { showTelemetryPanel = !showTelemetryPanel; }
+    void ToggleResourcePanel() { showResourcePanel = !showResourcePanel; }
+    void ToggleTerminalPanel() { showTerminalPanel = !showTerminalPanel; }
+    void ToggleCameraBanner() { showCameraBanner = !showCameraBanner; }
+    void ToggleTacticalMap() { showTacticalMap = !showTacticalMap; }
+    void ToggleFullscreenMap() { isMapFullscreen = !isMapFullscreen; }
+    void ToggleDroneInspector() { showDroneInspector = !showDroneInspector; }
+    void ToggleAllPanels() {
+        bool anyOn = showTelemetryPanel || showResourcePanel || showTerminalPanel || showCameraBanner || showTacticalMap;
+        showTelemetryPanel = !anyOn;
+        showResourcePanel = !anyOn;
+        showTerminalPanel = !anyOn;
+        showCameraBanner = !anyOn;
+        showTacticalMap = !anyOn;
+    }
+    void SelectInspectorDrone(int id) {
+        if (id >= 1 && id <= 14) inspectorDroneId = id;
+    }
+
     // Fleet accessors
     const DroneFleet::HomeBase& GetHomeBase() const { return base; }
     const std::vector<DroneFleet::Drone>& GetDrones() const { return drones; }
@@ -127,7 +168,7 @@ private:
     float patrolAngle;
 
     // Fleet Camera Controls
-    int activeCameraMode; // 0 = Free Flight Cam, 1..5 = Tracking Drones 1..5
+    int activeCameraMode; // 0 = Free Flight Cam, 1..14 = Tracking Drones 1..14
     Vector3 freeCamPos;
     float freeCamYaw;
     float freeCamPitch;
@@ -137,6 +178,16 @@ private:
     // Font Handling
     Font customFont;
     bool fontLoaded;
+
+    // UI Toggles & Inspector State
+    bool showTelemetryPanel = true;
+    bool showResourcePanel = true;
+    bool showTerminalPanel = true;
+    bool showCameraBanner = true;
+    bool showTacticalMap = true;
+    bool isMapFullscreen = false;
+    bool showDroneInspector = false;
+    int inspectorDroneId = 1;
 
     void DrawCustomText(const char* text, float posX, float posY, float fontSize, Color color) const;
 
@@ -151,4 +202,8 @@ private:
     void DrawDrone3D(const DroneFleet::Drone& drone) const;
     void DrawBase3D() const;
     void DrawClusters3D() const;
+
+    // UI Drawing Helpers
+    void DrawTacticalMap2D(int mapX, int mapY, int mapW, int mapH, bool fullscreen) const;
+    void DrawDroneInspector2D() const;
 };
