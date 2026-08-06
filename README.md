@@ -2,6 +2,11 @@
 
 Bu proje, **C++17** ve **raylib** kütüphanesi kullanılarak geliştirilmiş 3D platform, parkour, 5-drone'lu askeri otonom filo lojistik simülasyonu ve veri odaklı bölüm tasarımına sahip bir aksiyon/simülasyon oyunudur.
 
+## SON GÜNCELLEMER
+-Task force droneları çatışmaya gidereken artık düşman birliklerine tüm task force droneları ile saldırmıyor. Hesaplanan Magnitude değerine göre saldırıya gidecek drone sayısı belirleniyor
+-Yakıtı azalan recon droneları eğer ıdle support drone'u varsa o support drone ile orta noktada buluşarak ikmal yapabiliyor.
+
+
 ---
 
 ## 🪖 PART 1: Askeri Drone Filo Simülasyonu & Lojistik Arena (`F7` Modu)
