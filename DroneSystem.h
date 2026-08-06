@@ -31,6 +31,10 @@ struct Enemy {
     bool isAlive = true;
     float panicTimer = 0.0f;
     Vector3 fleeTarget = { 0.0f, 0.0f, 0.0f };
+
+    // Hostile Anti-Drone Counter-Attack
+    bool isFiringCounterAttack = false;
+    Vector3 counterAttackTargetPos = { 0.0f, 0.0f, 0.0f };
 };
 
 struct EnemyCluster {
@@ -54,6 +58,11 @@ struct Drone {
     float ammo = 100.0f;
     float maxFuel = 100.0f;
     float maxAmmo = 100.0f;
+
+    // Health & Damage System
+    float hp = 100.0f;
+    float maxHp = 100.0f;
+    bool isDestroyed = false;
     
     // Support Kargo Kapasitesi (Sadece SUPPORT rolündekiler için)
     float cargoFuel = 200.0f;
@@ -110,6 +119,7 @@ struct TelemetryContext {
     int knownTargetsMagnitude = 0;
     int eliminatedTargetsCount = 0;
     int activeClustersCount = 0;
+    int destroyedDronesCount = 0;
     
     std::vector<std::string> terminalLogs;
 };
