@@ -18,7 +18,7 @@ DroneSystemManager::DroneSystemManager()
       activeCameraMode(0), freeCamPos((Vector3){ 0.0f, 45.0f, 75.0f }),
       freeCamYaw(0.0f), freeCamPitch(-0.4f),
       trackCamYaw(0.0f), trackCamPitch(0.3f),
-      fontLoaded(false) {
+      fontLoaded(false), timeScale(1.0f), isPaused(false) {
 
     const char* fontPaths[] = {
         "/System/Library/Fonts/Supplemental/Arial.ttf",
@@ -64,20 +64,15 @@ std::string DroneSystemManager::GetActiveCameraModeName() const {
         case 5: return "TRACKING DRONE #5 [TASK FORCE 3 - 2x SPEED]";
         case 6: return "TRACKING DRONE #6 [TASK FORCE 4 - 2x SPEED]";
         case 7: return "TRACKING DRONE #7 [TASK FORCE 5 - 2x SPEED]";
-        case 8: return "TRACKING DRONE #8 [TASK FORCE 6 - 2x SPEED]";
-        case 9: return "TRACKING DRONE #9 [TASK FORCE 7 - 2x SPEED]";
-        case 10: return "TRACKING DRONE #10 [TASK FORCE 8 - 2x SPEED]";
-        case 11: return "TRACKING DRONE #11 [TASK FORCE 9 - 2x SPEED]";
-        case 12: return "TRACKING DRONE #12 [TASK FORCE 10 - 2x SPEED]";
-        case 13: return "TRACKING DRONE #13 [SUPPORT 1 - 1x SPEED]";
-        case 14: return "TRACKING DRONE #14 [SUPPORT 2 - 1x SPEED]";
+        case 8: return "TRACKING DRONE #8 [SUPPORT 1 - 2x SPEED]";
+        case 9: return "TRACKING DRONE #9 [SUPPORT 2 - 2x SPEED]";
         default: return "FREE CAM";
     }
 }
 
 void DroneSystemManager::UpdateFleetCamera(Camera3D& camera, float dt) {
     if (IsKeyPressed(KEY_TAB)) {
-        activeCameraMode = (activeCameraMode + 1) % 15;
+        activeCameraMode = (activeCameraMode + 1) % 10;
         char buf[128];
         snprintf(buf, sizeof(buf), "[COMMAND CAM] Switched view to: %s", GetActiveCameraModeName().c_str());
         LogTerminal(buf);
@@ -99,7 +94,7 @@ void DroneSystemManager::UpdateFleetCamera(Camera3D& camera, float dt) {
     if (IsKeyPressed(KEY_EIGHT)) { activeCameraMode = 8;  if (IsAudioDeviceReady()) AudioManager::Instance().PlayClick(); }
     if (IsKeyPressed(KEY_NINE))  { activeCameraMode = 9;  if (IsAudioDeviceReady()) AudioManager::Instance().PlayClick(); }
 
-    if (activeCameraMode >= 1 && activeCameraMode <= 14) {
+    if (activeCameraMode >= 1 && activeCameraMode <= 9) {
         inspectorDroneId = activeCameraMode;
     }
 
@@ -162,7 +157,7 @@ void DroneSystemManager::LogTerminal(const std::string& msg) {
     snprintf(timeStr, sizeof(timeStr), "[%02d:%02d] ", mins, secs);
 
     telemetry.terminalLogs.push_back(std::string(timeStr) + msg);
-    if (telemetry.terminalLogs.size() > 50) {
+    if (telemetry.terminalLogs.size() > 60) {
         telemetry.terminalLogs.erase(telemetry.terminalLogs.begin());
     }
 }
@@ -175,44 +170,37 @@ void DroneSystemManager::Init() {
 
     drones.clear();
 
-    // 1. RECON #1 & #2 — Speed: 4x (32m/s), Fuel: 2x (200.0f), Ammo: 0, 80 HP
+    // 1. RECON #1 & #2 — Speed: 4x (32m/s), Fuel: 2x (200.0f), Ammo: 0, 160 HP
     Drone r1; r1.id = 1; r1.role = DroneRole::RECON; r1.state = DroneState::IDLE_AT_BASE;
-    r1.baseDockPos = (Vector3){ -14.0f, 0.6f, -18.0f }; r1.position = r1.baseDockPos; r1.targetPosition = r1.position;
+    r1.baseDockPos = (Vector3){ -14.0f, 0.6f, -12.0f }; r1.position = r1.baseDockPos; r1.targetPosition = r1.position;
     r1.velocity = (Vector3){ 0, 0, 0 }; r1.maxFuel = 200.0f; r1.fuel = 200.0f; r1.maxAmmo = 0.0f; r1.ammo = 0.0f;
-    r1.maxHp = 80.0f; r1.hp = 80.0f; r1.isDestroyed = false; r1.isBeingRecovered = false;
-    r1.reconSectorIndex = 0; r1.LogAction("Docked at Hangar Bay #1 (4x Speed, 2x Fuel)"); drones.push_back(r1);
+    r1.maxHp = 160.0f; r1.hp = 160.0f; r1.isDestroyed = false; r1.isBeingRecovered = false;
+    r1.reconSectorIndex = 0; r1.LogAction("Docked at Hangar Bay #1 (4x Speed, 2x Fuel, 160 HP)"); drones.push_back(r1);
 
     Drone r2; r2.id = 2; r2.role = DroneRole::RECON; r2.state = DroneState::IDLE_AT_BASE;
-    r2.baseDockPos = (Vector3){ -14.0f, 0.6f, -12.0f }; r2.position = r2.baseDockPos; r2.targetPosition = r2.position;
+    r2.baseDockPos = (Vector3){ -14.0f, 0.6f, -6.0f }; r2.position = r2.baseDockPos; r2.targetPosition = r2.position;
     r2.velocity = (Vector3){ 0, 0, 0 }; r2.maxFuel = 200.0f; r2.fuel = 200.0f; r2.maxAmmo = 0.0f; r2.ammo = 0.0f;
-    r2.maxHp = 80.0f; r2.hp = 80.0f; r2.isDestroyed = false; r2.isBeingRecovered = false;
-    r2.reconSectorIndex = 8; r2.LogAction("Docked at Hangar Bay #2 (4x Speed, 2x Fuel)"); drones.push_back(r2);
+    r2.maxHp = 160.0f; r2.hp = 160.0f; r2.isDestroyed = false; r2.isBeingRecovered = false;
+    r2.reconSectorIndex = 8; r2.LogAction("Docked at Hangar Bay #2 (4x Speed, 2x Fuel, 160 HP)"); drones.push_back(r2);
 
-    // 2. TASK FORCE #1 .. #10 — Speed: 2x (16m/s), Fuel: 1x (100.0f), Ammo: 1x (60.0f), 100 HP
+    // 2. TASK FORCE #1 .. #5 — Speed: 2x (16m/s), Fuel: 1x (100.0f), Ammo: 1x (60.0f), 200 HP
     for (int i = 0; i < 5; i++) {
         Drone tf; tf.id = 3 + i; tf.role = DroneRole::TASK_FORCE; tf.state = DroneState::IDLE_AT_BASE;
-        tf.baseDockPos = (Vector3){ -14.0f, 0.6f, -6.0f + (float)i * 6.0f }; tf.position = tf.baseDockPos; tf.targetPosition = tf.position;
+        float zPos = -12.0f + (float)i * 6.0f;
+        tf.baseDockPos = (Vector3){ 0.0f, 0.6f, zPos }; tf.position = tf.baseDockPos; tf.targetPosition = tf.position;
         tf.velocity = (Vector3){ 0, 0, 0 }; tf.maxFuel = 100.0f; tf.fuel = 100.0f; tf.maxAmmo = 60.0f; tf.ammo = 60.0f;
-        tf.maxHp = 100.0f; tf.hp = 100.0f; tf.isDestroyed = false; tf.isBeingRecovered = false;
-        tf.LogAction("Docked at Hangar Bay #" + std::to_string(tf.id) + " (2x Speed, 1x Fuel)"); drones.push_back(tf);
+        tf.maxHp = 200.0f; tf.hp = 200.0f; tf.isDestroyed = false; tf.isBeingRecovered = false;
+        tf.LogAction("Docked at Hangar Bay #" + std::to_string(tf.id) + " (2x Speed, 1x Fuel, 200 HP)"); drones.push_back(tf);
     }
 
-    for (int i = 0; i < 5; i++) {
-        Drone tf; tf.id = 8 + i; tf.role = DroneRole::TASK_FORCE; tf.state = DroneState::IDLE_AT_BASE;
-        tf.baseDockPos = (Vector3){ 14.0f, 0.6f, -18.0f + (float)i * 6.0f }; tf.position = tf.baseDockPos; tf.targetPosition = tf.position;
-        tf.velocity = (Vector3){ 0, 0, 0 }; tf.maxFuel = 100.0f; tf.fuel = 100.0f; tf.maxAmmo = 60.0f; tf.ammo = 60.0f;
-        tf.maxHp = 100.0f; tf.hp = 100.0f; tf.isDestroyed = false; tf.isBeingRecovered = false;
-        tf.LogAction("Docked at Hangar Bay #" + std::to_string(tf.id) + " (2x Speed, 1x Fuel)"); drones.push_back(tf);
-    }
-
-    // 3. SUPPORT #1 & #2 — Speed: 1x (8m/s), Fuel: 4x (400.0f), Cargo: 600 Fuel / 4x Ammo (240.0f), 150 HP
+    // 3. SUPPORT #1 & #2 — Speed: 2x (16m/s SPEED BUFF!), Fuel: 4x (400.0f), Cargo: 600 Fuel / 240 Ammo, 300 HP
     for (int i = 0; i < 2; i++) {
-        Drone s; s.id = 13 + i; s.role = DroneRole::SUPPORT; s.state = DroneState::IDLE_AT_BASE;
-        s.baseDockPos = (Vector3){ 14.0f, 0.6f, 12.0f + (float)i * 6.0f }; s.position = s.baseDockPos; s.targetPosition = s.position;
+        Drone s; s.id = 8 + i; s.role = DroneRole::SUPPORT; s.state = DroneState::IDLE_AT_BASE;
+        s.baseDockPos = (Vector3){ 14.0f, 0.6f, -6.0f + (float)i * 12.0f }; s.position = s.baseDockPos; s.targetPosition = s.position;
         s.velocity = (Vector3){ 0, 0, 0 }; s.maxFuel = 400.0f; s.fuel = 400.0f; s.maxAmmo = 0.0f; s.ammo = 0.0f;
-        s.maxHp = 150.0f; s.hp = 150.0f; s.isDestroyed = false; s.isBeingRecovered = false;
+        s.maxHp = 300.0f; s.hp = 300.0f; s.isDestroyed = false; s.isBeingRecovered = false;
         s.cargoFuel = 600.0f; s.cargoAmmo = 240.0f;
-        s.LogAction("Docked at Hangar Bay #" + std::to_string(s.id) + " (1x Speed, 4x Fuel, 4x Cargo)"); drones.push_back(s);
+        s.LogAction("Docked at Hangar Bay #" + std::to_string(s.id) + " (2x Speed Buff, 4x Fuel, 300 HP)"); drones.push_back(s);
     }
 
     clusters.clear();
@@ -220,27 +208,28 @@ void DroneSystemManager::Init() {
     telemetry.terminalLogs.clear();
     telemetry.eliminatedTargetsCount = 0;
     telemetry.destroyedDronesCount = 0;
+    timeScale = 1.0f;
+    isPaused = false;
 
-    LogTerminal("[TACTICAL COMMAND] 14-Drone Military Autonomous Fleet Initialized.");
-    LogTerminal("[SYSTEM] Threat Algorithm Active: Armed Units = 1.0 Mag | Unarmed Units = 0.5 Mag");
+    LogTerminal("[TACTICAL COMMAND] 9-Drone Military Autonomous Fleet Initialized.");
+    LogTerminal("[THREAT FORMULA] Magnitude = (Armed*0.5 + Unarmed*0.25) [Halved Ratios]");
 
     SpawnCluster();
 }
 
-// --- SPAWN CLUSTER WITH ARMED (1.0) & UNARMED (0.5) THREAT CALCULATIONS ---
-void DroneSystemManager::SpawnCluster() {
+void DroneSystemManager::SpawnCustomCluster(bool forceArmed, int forceMag) {
     EnemyCluster cluster;
     cluster.id = nextClusterId++;
     
-    float rx = (float)GetRandomValue(-370, 370);
-    float rz = (float)GetRandomValue(-370, 370);
+    float rx = (float)GetRandomValue(-350, 350);
+    float rz = (float)GetRandomValue(-350, 350);
     if (fabsf(rx) < 50.0f && fabsf(rz) < 50.0f) {
-        rx = 200.0f;
-        rz = 200.0f;
+        rx = 180.0f;
+        rz = 180.0f;
     }
     cluster.centerPosition = (Vector3){ rx, 1.0f, rz };
 
-    int totalUnits = GetRandomValue(4, 14);
+    int totalUnits = (forceMag > 0) ? forceMag : GetRandomValue(6, 12);
     cluster.initialMagnitude = totalUnits;
     cluster.remainingMagnitude = totalUnits;
     cluster.status = ClusterStatus::UNDETECTED;
@@ -261,24 +250,26 @@ void DroneSystemManager::SpawnCluster() {
         e.panicTimer = 0.0f;
         e.fleeTarget = e.position;
         e.isFiringCounterAttack = false;
+        e.isArmed = forceArmed;
 
-        // 50% probability of Armed vs Unarmed non-combatant
-        e.isArmed = (GetRandomValue(0, 100) < 50);
         if (e.isArmed) cluster.armedCount++;
         else cluster.unarmedCount++;
 
         cluster.enemies.push_back(e);
     }
 
-    // THREAT MAGNITUDE FORMULA: ceil(Armed * 1.0 + Unarmed * 0.5)
-    cluster.calculatedThreatMagnitude = (int)ceilf((float)cluster.armedCount * 1.0f + (float)cluster.unarmedCount * 0.5f);
-
+    cluster.calculatedThreatMagnitude = (int)ceilf((float)cluster.armedCount * 0.5f + (float)cluster.unarmedCount * 0.25f);
     clusters.push_back(cluster);
 
-    char buf[160];
-    snprintf(buf, sizeof(buf), "[INTEL] Unknown Hostile Cluster #%d spawned (%d Units: %d Armed @1.0, %d Unarmed @0.5 -> Est. Threat Mag: %d)",
-             cluster.id, totalUnits, cluster.armedCount, cluster.unarmedCount, cluster.calculatedThreatMagnitude);
+    char buf[180];
+    snprintf(buf, sizeof(buf), "[MANUAL SPAWN] %s Cluster #%d (%d Units -> Threat Mag: %d) at (%.0f, %.0f)!",
+             forceArmed ? "ARMED" : "UNARMED", cluster.id, totalUnits, cluster.calculatedThreatMagnitude, rx, rz);
     LogTerminal(buf);
+    if (IsAudioDeviceReady()) AudioManager::Instance().PlayClick();
+}
+
+void DroneSystemManager::SpawnCluster() {
+    SpawnCustomCluster(GetRandomValue(0, 100) < 50, GetRandomValue(4, 12));
 }
 
 void DroneSystemManager::ApplyFlankingAndSeparation(Drone& drone, float dt) {
@@ -295,7 +286,7 @@ void DroneSystemManager::ApplyFlankingAndSeparation(Drone& drone, float dt) {
     }
 }
 
-// --- RECON FSM: HIGH SPEED 4x SCOUT & 50% RADAR EARLY REPORTING ---
+// --- RECON FSM: AERIAL RENDEZVOUS REFUEL WITH SUPPORT DRONES ---
 void DroneSystemManager::UpdateRecon(Drone& drone, float dt) {
     if (drone.isDestroyed) return;
 
@@ -305,7 +296,7 @@ void DroneSystemManager::UpdateRecon(Drone& drone, float dt) {
     }
 
     if (drone.state == DroneState::IDLE_AT_BASE) {
-        if (drone.fuel >= 195.0f && drone.hp >= 75.0f) {
+        if (drone.fuel >= 195.0f && drone.hp >= 120.0f) {
             drone.state = DroneState::PATROL;
             drone.hasRendezvous = false;
             drone.assignedSupportId = -1;
@@ -317,11 +308,55 @@ void DroneSystemManager::UpdateRecon(Drone& drone, float dt) {
 
     drone.fuel -= dt * 0.8f;
 
-    if (drone.fuel <= 50.0f && drone.state != DroneState::RETURNING_TO_BASE) {
-        drone.state = DroneState::RETURNING_TO_BASE;
-        drone.targetPosition = drone.baseDockPos;
-        drone.LogAction("Low fuel (<25%). Returning to Hangar for refill.");
-        LogTerminal("[RECON #" + std::to_string(drone.id) + "] Low fuel warning. Returning to Hangar.");
+    // --- RECON LOW FUEL: INITIATE AERIAL RENDEZVOUS WITH AVAILABLE SUPPORT DRONE ---
+    if (drone.fuel <= 60.0f && drone.state != DroneState::RETURNING_TO_BASE && drone.state != DroneState::RESUPPLYING_IN_AIR) {
+        if (!drone.hasRendezvous && drone.assignedSupportId == -1) {
+            Drone* availSupport = nullptr;
+            for (auto& s : drones) {
+                if (s.role == DroneRole::SUPPORT && !s.isDestroyed && s.cargoFuel > 50.0f && (s.state == DroneState::IDLE_AT_BASE || s.state == DroneState::PATROL)) {
+                    availSupport = &s;
+                    break;
+                }
+            }
+
+            if (availSupport != nullptr) {
+                drone.assignedSupportId = availSupport->id;
+                availSupport->servicingReconId = drone.id;
+
+                Vector3 rendezvousPoint = (Vector3){
+                    (drone.position.x + base.position.x) * 0.5f,
+                    20.0f,
+                    (drone.position.z + base.position.z) * 0.5f
+                };
+
+                drone.rendezvousPos = rendezvousPoint;
+                drone.hasRendezvous = true;
+                drone.state = DroneState::REQUESTING_SUPPORT;
+                drone.targetPosition = rendezvousPoint;
+
+                availSupport->rendezvousPos = rendezvousPoint;
+                availSupport->hasRendezvous = true;
+                availSupport->state = DroneState::MOVING_TO_TARGET;
+                availSupport->targetPosition = rendezvousPoint;
+
+                char buf[180];
+                snprintf(buf, sizeof(buf), "[RECON #%d] Low Fuel (%.0f%%)! Initiating Mid-Air Aerial Rendezvous Refuel with Support #%d at (%.0f, %.0f)",
+                         drone.id, (drone.fuel / drone.maxFuel) * 100.0f, availSupport->id, rendezvousPoint.x, rendezvousPoint.z);
+                LogTerminal(buf);
+                drone.LogAction("Low fuel! Flying to Mid-Air Rendezvous Point for aerial refuel by Support #" + std::to_string(availSupport->id));
+                availSupport->LogAction("Dispatched to Mid-Air Rendezvous Point to refuel Recon #" + std::to_string(drone.id));
+            } else {
+                drone.state = DroneState::RETURNING_TO_BASE;
+                drone.targetPosition = drone.baseDockPos;
+                drone.LogAction("Low fuel (<30%), No Support available. RTB to Hangar.");
+                LogTerminal("[RECON #" + std::to_string(drone.id) + "] Low fuel warning. No Support available -> RTB to Hangar.");
+            }
+            return;
+        }
+    }
+
+    if (drone.state == DroneState::REQUESTING_SUPPORT || drone.state == DroneState::RESUPPLYING_IN_AIR) {
+        drone.targetPosition = drone.rendezvousPos;
         return;
     }
 
@@ -340,7 +375,6 @@ void DroneSystemManager::UpdateRecon(Drone& drone, float dt) {
         drone.targetPosition = (Vector3){ detectedCluster->centerPosition.x, 18.0f, detectedCluster->centerPosition.z };
         float dist = Vector3Distance(drone.position, detectedCluster->centerPosition);
 
-        // RECON EARLY REPORT: When within HALF of detection radius (70m), report to Command!
         if (dist <= 70.0f) {
             drone.state = DroneState::SCANNING;
             scanTimer += dt;
@@ -348,7 +382,6 @@ void DroneSystemManager::UpdateRecon(Drone& drone, float dt) {
                 detectedCluster->status = ClusterStatus::REPORTED;
                 scanTimer = 0.0f;
                 
-                // Recalculate remaining threat magnitude for alive hostiles
                 int aliveArmed = 0;
                 int aliveUnarmed = 0;
                 for (const auto& e : detectedCluster->enemies) {
@@ -359,10 +392,10 @@ void DroneSystemManager::UpdateRecon(Drone& drone, float dt) {
                 }
                 detectedCluster->armedCount = aliveArmed;
                 detectedCluster->unarmedCount = aliveUnarmed;
-                detectedCluster->calculatedThreatMagnitude = (int)ceilf((float)aliveArmed * 1.0f + (float)aliveUnarmed * 0.5f);
+                detectedCluster->calculatedThreatMagnitude = (int)ceilf((float)aliveArmed * 0.5f + (float)aliveUnarmed * 0.25f);
 
                 char buf[180];
-                snprintf(buf, sizeof(buf), "[RECON #%d] Cluster #%d VERIFIED at 50%% Radar Radius! Threat Mag: %d (%d Armed @1.0, %d Unarmed @0.5)",
+                snprintf(buf, sizeof(buf), "[RECON #%d] Cluster #%d VERIFIED at 50%% Radar Radius! Threat Mag: %d (%d Armed @0.5, %d Unarmed @0.25)",
                          drone.id, detectedCluster->id, detectedCluster->calculatedThreatMagnitude, aliveArmed, aliveUnarmed);
                 LogTerminal(buf);
                 drone.LogAction("Verified Hostile Cluster #" + std::to_string(detectedCluster->id) + " (Threat Mag: " + std::to_string(detectedCluster->calculatedThreatMagnitude) + ")");
@@ -391,7 +424,7 @@ void DroneSystemManager::UpdateRecon(Drone& drone, float dt) {
     }
 }
 
-// --- TASK FORCE FSM: STRIKE DISPATCH BASED ON CALCULATED THREAT MAGNITUDE ---
+// --- TASK FORCE FSM: STRIKE DISPATCH & MIDPOINT RENDEZVOUS REFUELING ---
 void DroneSystemManager::UpdateTaskForce(Drone& drone, float dt) {
     if (drone.isDestroyed) return;
 
@@ -399,21 +432,35 @@ void DroneSystemManager::UpdateTaskForce(Drone& drone, float dt) {
         drone.fuel -= dt * 1.0f;
     }
 
-    if (drone.fuel <= 12.0f || (drone.ammo <= 0.0f && drone.state != DroneState::RESUPPLYING_IN_AIR) || drone.hp <= 18.0f) {
+    if (drone.fuel <= 12.0f || (drone.ammo <= 0.0f && drone.state != DroneState::RESUPPLYING_IN_AIR) || drone.hp <= 25.0f) {
         if (drone.state != DroneState::RETURNING_TO_BASE) {
             drone.state = DroneState::RETURNING_TO_BASE;
             drone.targetPosition = drone.baseDockPos;
             drone.assignedClusterId = -1;
             drone.LogAction("Resource Low/Damage! RTB to Hangar.");
-            LogTerminal("[TASK FORCE #" + std::to_string(drone.id) + "] Emergency RTB to Hangar (F:" + std::to_string((int)drone.fuel) + "%, A:" + std::to_string((int)drone.ammo) + "%, HP:" + std::to_string((int)drone.hp) + ").");
         }
     }
 
-    if (drone.fuel <= 35.0f || drone.ammo <= 20.0f || drone.hp <= 50.0f) {
-        if (drone.state != DroneState::REQUESTING_SUPPORT && drone.state != DroneState::RESUPPLYING_IN_AIR && drone.state != DroneState::RETURNING_TO_BASE) {
+    if (drone.fuel <= 45.0f || drone.ammo <= 25.0f || drone.hp <= 120.0f) {
+        if (drone.state != DroneState::REQUESTING_SUPPORT && drone.state != DroneState::RESUPPLYING_IN_AIR) {
             drone.state = DroneState::REQUESTING_SUPPORT;
-            drone.LogAction("Requesting Support (F:" + std::to_string((int)drone.fuel) + "%, A:" + std::to_string((int)drone.ammo) + "%, HP:" + std::to_string((int)drone.hp) + ")");
+
+            Vector3 midPoint = (Vector3){
+                (drone.position.x + base.position.x) * 0.5f,
+                18.0f,
+                (drone.position.z + base.position.z) * 0.5f
+            };
+            drone.rendezvousPos = midPoint;
+            drone.hasRendezvous = true;
+            drone.targetPosition = midPoint;
+
+            drone.LogAction("Requesting Midpoint Support Tanker (F:" + std::to_string((int)drone.fuel) + "%, A:" + std::to_string((int)drone.ammo) + "%, HP:" + std::to_string((int)drone.hp) + ")");
+            LogTerminal("[TF #" + std::to_string(drone.id) + "] Low resources! Flying to Midpoint Rendezvous to meet Support.");
         }
+    }
+
+    if (drone.state == DroneState::REQUESTING_SUPPORT || drone.state == DroneState::RESUPPLYING_IN_AIR) {
+        drone.targetPosition = drone.rendezvousPos;
     }
 
     EnemyCluster* targetCluster = nullptr;
@@ -434,11 +481,10 @@ void DroneSystemManager::UpdateTaskForce(Drone& drone, float dt) {
                     }
                 }
 
-                // Dispatch size matches Calculated Threat Magnitude (min 1, max 10)
-                int requiredDispatch = std::clamp(c.calculatedThreatMagnitude, 1, 10);
+                int requiredDispatch = std::clamp(c.calculatedThreatMagnitude, 1, 5);
                 if (currentlyAssigned < requiredDispatch) {
                     bool isEligibleForDispatch = (drone.state == DroneState::IDLE_AT_BASE);
-                    bool isEligibleForMidAirRetask = (drone.state != DroneState::ENGAGING && drone.fuel >= 40.0f && drone.ammo >= 15.0f && drone.hp >= 30.0f);
+                    bool isEligibleForMidAirRetask = (drone.state != DroneState::ENGAGING && drone.fuel >= 35.0f && drone.ammo >= 15.0f && drone.hp >= 60.0f);
 
                     if (isEligibleForDispatch || isEligibleForMidAirRetask) {
                         targetCluster = &c;
@@ -446,14 +492,16 @@ void DroneSystemManager::UpdateTaskForce(Drone& drone, float dt) {
                         drone.state = DroneState::MOVING_TO_TARGET;
                         c.status = ClusterStatus::ENGAGED;
 
-                        // COMBAT MEDIC ESCORT: Deploy Support alongside strike group!
-                        for (auto& s : drones) {
-                            if (s.role == DroneRole::SUPPORT && s.state == DroneState::IDLE_AT_BASE && !s.isDestroyed) {
-                                s.assignedClusterId = c.id;
-                                s.state = DroneState::MOVING_TO_TARGET;
-                                s.LogAction("Deploying as COMBAT MEDIC ESCORT for Strike Group at Cluster #" + std::to_string(c.id));
-                                LogTerminal("[MEDIC ESCORT] Support #" + std::to_string(s.id) + " launched with Strike Group for Cluster #" + std::to_string(c.id));
-                                break;
+                        // MANDATORY SUPPORT ESCORT FOR ARMED HOSTILE MISSIONS!
+                        if (c.armedCount > 0) {
+                            for (auto& s : drones) {
+                                if (s.role == DroneRole::SUPPORT && s.state == DroneState::IDLE_AT_BASE && !s.isDestroyed) {
+                                    s.assignedClusterId = c.id;
+                                    s.state = DroneState::MOVING_TO_TARGET;
+                                    s.LogAction("Deploying as MANDATORY COMBAT ESCORT for Strike Group at Cluster #" + std::to_string(c.id));
+                                    LogTerminal("[ARMED ESCORT] Support #" + std::to_string(s.id) + " dispatched alongside Strike Group against Armed Hostiles at Cluster #" + std::to_string(c.id));
+                                    break;
+                                }
                             }
                         }
 
@@ -480,12 +528,12 @@ void DroneSystemManager::UpdateTaskForce(Drone& drone, float dt) {
         return;
     }
 
-    if (targetCluster && targetCluster->calculatedThreatMagnitude > 0) {
-        float tfIdx = (float)(drone.id - 3); // 0 .. 9
+    if (targetCluster && targetCluster->calculatedThreatMagnitude > 0 && drone.state != DroneState::REQUESTING_SUPPORT && drone.state != DroneState::RESUPPLYING_IN_AIR) {
+        float tfIdx = (float)(drone.id - 3); // 0 .. 4
         float baseAngle = atan2f(targetCluster->centerPosition.x - base.position.x, targetCluster->centerPosition.z - base.position.z);
-        float offsetAngle = baseAngle + (tfIdx - 4.5f) * 0.35f;
+        float offsetAngle = baseAngle + (tfIdx - 2.0f) * 0.45f;
         float standoffRadius = 32.0f + (float)((int)tfIdx % 3) * 6.0f;
-        float standoffHeight = 12.0f + (float)((int)tfIdx % 4) * 4.0f;
+        float standoffHeight = 12.0f + (float)((int)tfIdx % 3) * 4.0f;
 
         drone.targetPosition = (Vector3){
             targetCluster->centerPosition.x + sinf(offsetAngle) * standoffRadius,
@@ -499,13 +547,12 @@ void DroneSystemManager::UpdateTaskForce(Drone& drone, float dt) {
             drone.state = DroneState::ENGAGING;
             drone.ammo -= dt * 3.5f;
 
-            // Prioritize ARMED hostiles first!
             Enemy* closestEnemy = nullptr;
             float minDist = 9999.0f;
             for (auto& e : targetCluster->enemies) {
                 if (e.isAlive) {
                     float ed = Vector3Distance(drone.position, e.position);
-                    if (e.isArmed) ed -= 50.0f; // Priority bias towards armed targets
+                    if (e.isArmed) ed -= 50.0f;
 
                     if (ed < minDist) {
                         minDist = ed;
@@ -535,7 +582,6 @@ void DroneSystemManager::UpdateTaskForce(Drone& drone, float dt) {
                     targetCluster->remainingMagnitude--;
                     telemetry.eliminatedTargetsCount++;
 
-                    // Recalculate remaining threat magnitude
                     int aliveArmed = 0;
                     int aliveUnarmed = 0;
                     for (const auto& e : targetCluster->enemies) {
@@ -546,7 +592,7 @@ void DroneSystemManager::UpdateTaskForce(Drone& drone, float dt) {
                     }
                     targetCluster->armedCount = aliveArmed;
                     targetCluster->unarmedCount = aliveUnarmed;
-                    targetCluster->calculatedThreatMagnitude = (int)ceilf((float)aliveArmed * 1.0f + (float)aliveUnarmed * 0.5f);
+                    targetCluster->calculatedThreatMagnitude = (int)ceilf((float)aliveArmed * 0.5f + (float)aliveUnarmed * 0.25f);
 
                     char buf[160];
                     snprintf(buf, sizeof(buf), "[TASK FORCE #%d] %s Target Neutralized! Cluster #%d Threat Mag: %d (%d Armed, %d Unarmed)",
@@ -574,7 +620,7 @@ void DroneSystemManager::UpdateTaskForce(Drone& drone, float dt) {
     }
 }
 
-// --- SUPPORT LOGISTICS FSM: PRIORITY #1 SAR RECOVERY -> PRIORITY #2 COMBAT MEDIC ESCORT ---
+// --- SUPPORT LOGISTICS FSM: PRIORITY 1 SAR RECOVERY -> PRIORITY 2 RECON RENDEZVOUS -> PRIORITY 3 TF MIDPOINT TANKER ---
 void DroneSystemManager::UpdateSupport(Drone& drone, float dt) {
     if (drone.isDestroyed) return;
 
@@ -590,89 +636,161 @@ void DroneSystemManager::UpdateSupport(Drone& drone, float dt) {
     // --- PRIORITY #1: DOWNED DRONE SAR CRASH RECOVERY ---
     Drone* downedDrone = nullptr;
     for (auto& d : drones) {
-        if (d.isDestroyed && (!d.isBeingRecovered || d.recoveringDroneId == drone.id)) {
+        if (d.isDestroyed) {
             downedDrone = &d;
             break;
         }
     }
 
     if (downedDrone != nullptr) {
-        downedDrone->isBeingRecovered = true;
         drone.recoveringDroneId = downedDrone->id;
 
-        if (drone.state == DroneState::IDLE_AT_BASE || drone.state == DroneState::PATROL || drone.state == DroneState::MOVING_TO_TARGET) {
-            drone.state = DroneState::MOVING_TO_TARGET;
-            drone.LogAction("Dispatched on SAR CRASH RECOVERY for downed TF #" + std::to_string(downedDrone->id));
-            LogTerminal("[SAR MISSION] Support #" + std::to_string(drone.id) + " dispatched to recover downed Drone #" + std::to_string(downedDrone->id));
+        bool hostilesNearCrash = false;
+        for (const auto& c : clusters) {
+            if (c.status != ClusterStatus::CLEARED && c.calculatedThreatMagnitude > 0) {
+                if (Vector3Distance(c.centerPosition, downedDrone->position) <= 120.0f) {
+                    hostilesNearCrash = true;
+                    break;
+                }
+            }
         }
 
-        drone.targetPosition = (Vector3){ downedDrone->position.x, 5.0f, downedDrone->position.z };
-        float dist = Vector3Distance(drone.position, downedDrone->position);
-
-        if (dist < 35.0f) {
-            drone.state = DroneState::RESUPPLYING_IN_AIR;
-            drone.isResupplyBeamActive = true;
-            drone.resupplyTargetPos = downedDrone->position;
-
-            float repairAmount = dt * 45.0f;
-            downedDrone->hp = std::min(downedDrone->maxHp, downedDrone->hp + repairAmount);
-
-            if (downedDrone->hp >= downedDrone->maxHp - 2.0f) {
-                downedDrone->hp = downedDrone->maxHp;
-                downedDrone->fuel = downedDrone->maxFuel * 0.8f;
-                downedDrone->ammo = downedDrone->maxAmmo * 0.8f;
-                downedDrone->isDestroyed = false;
-                downedDrone->isBeingRecovered = false;
-                downedDrone->state = DroneState::MOVING_TO_TARGET;
-
-                drone.recoveringDroneId = -1;
-                drone.isResupplyBeamActive = false;
-                if (telemetry.destroyedDronesCount > 0) telemetry.destroyedDronesCount--;
-
-                char buf[160];
-                snprintf(buf, sizeof(buf), "[SAR RECOVERY] Support #%d RECOVERED & REBOOTED Task Force #%d at crash site!", drone.id, downedDrone->id);
-                LogTerminal(buf);
-                drone.LogAction("Successfully recovered & rebooted TF #" + std::to_string(downedDrone->id) + " at crash site.");
-                downedDrone->LogAction("Recovered & rebooted mid-field by Support #" + std::to_string(drone.id));
-
-                if (IsAudioDeviceReady()) AudioManager::Instance().PlayLevelUp();
-            }
-        } else {
-            drone.state = DroneState::MOVING_TO_TARGET;
+        if (hostilesNearCrash) {
+            drone.targetPosition = (Vector3){ downedDrone->position.x, 25.0f, downedDrone->position.z };
             drone.isResupplyBeamActive = false;
+            drone.state = DroneState::MOVING_TO_TARGET;
+        } else {
+            if (drone.state == DroneState::IDLE_AT_BASE || drone.state == DroneState::PATROL || drone.state == DroneState::MOVING_TO_TARGET) {
+                drone.state = DroneState::MOVING_TO_TARGET;
+                drone.LogAction("Dispatched on SAR CRASH RECOVERY for downed TF #" + std::to_string(downedDrone->id));
+                LogTerminal("[SAR MISSION] Support #" + std::to_string(drone.id) + " dispatched to recover downed Drone #" + std::to_string(downedDrone->id));
+            }
+
+            drone.targetPosition = (Vector3){ downedDrone->position.x, 4.0f, downedDrone->position.z };
+            float dist = Vector3Distance(drone.position, downedDrone->position);
+
+            if (dist < 35.0f) {
+                drone.state = DroneState::RESUPPLYING_IN_AIR;
+                drone.isResupplyBeamActive = true;
+                drone.resupplyTargetPos = downedDrone->position;
+
+                float repairAmount = dt * 60.0f;
+                downedDrone->hp = std::min(downedDrone->maxHp, downedDrone->hp + repairAmount);
+
+                if (downedDrone->hp >= downedDrone->maxHp - 2.0f) {
+                    downedDrone->hp = downedDrone->maxHp;
+                    downedDrone->fuel = downedDrone->maxFuel * 0.8f;
+                    downedDrone->ammo = downedDrone->maxAmmo * 0.8f;
+                    downedDrone->isDestroyed = false;
+                    downedDrone->isBeingRecovered = false;
+                    downedDrone->state = DroneState::MOVING_TO_TARGET;
+
+                    drone.recoveringDroneId = -1;
+                    drone.isResupplyBeamActive = false;
+                    if (telemetry.destroyedDronesCount > 0) telemetry.destroyedDronesCount--;
+
+                    char buf[160];
+                    snprintf(buf, sizeof(buf), "[SAR RECOVERY] Support #%d RECOVERED & REBOOTED Task Force #%d at crash site (HP 100%%)!", drone.id, downedDrone->id);
+                    LogTerminal(buf);
+                    drone.LogAction("Successfully recovered & rebooted TF #" + std::to_string(downedDrone->id) + " at crash site.");
+                    downedDrone->LogAction("Recovered & rebooted mid-field by Support #" + std::to_string(drone.id));
+
+                    if (IsAudioDeviceReady()) AudioManager::Instance().PlayLevelUp();
+                }
+            } else {
+                drone.state = DroneState::MOVING_TO_TARGET;
+                drone.isResupplyBeamActive = false;
+            }
         }
         return;
     }
 
-    // --- PRIORITY #2: COMBAT MEDIC ESCORT & MID-AIR RESUPPLY/REPAIR ---
-    Drone* needyTF = nullptr;
-    float lowestRes = 999.0f;
+    // --- PRIORITY #2: RECON AERIAL RENDEZVOUS REFUEL ---
+    if (drone.servicingReconId != -1) {
+        int rIdx = drone.servicingReconId - 1;
+        if (rIdx >= 0 && rIdx < (int)drones.size()) {
+            auto& reconDrone = drones[rIdx];
 
-    for (auto& d : drones) {
-        if (d.role == DroneRole::TASK_FORCE && !d.isDestroyed && d.state != DroneState::RETURNING_TO_BASE && d.state != DroneState::IDLE_AT_BASE) {
-            if (d.state == DroneState::REQUESTING_SUPPORT || d.fuel < 45.0f || d.ammo < 25.0f || d.hp < 80.0f) {
-                float priorityVal = d.fuel + d.ammo + d.hp;
-                if (priorityVal < lowestRes) {
-                    lowestRes = priorityVal;
-                    needyTF = &d;
+            drone.targetPosition = reconDrone.rendezvousPos;
+            float dist = Vector3Distance(drone.position, reconDrone.position);
+
+            if (dist < 35.0f) {
+                drone.state = DroneState::RESUPPLYING_IN_AIR;
+                drone.isResupplyBeamActive = true;
+                drone.resupplyTargetPos = reconDrone.position;
+                reconDrone.state = DroneState::RESUPPLYING_IN_AIR;
+
+                float transferFuel = dt * 40.0f;
+                if (drone.cargoFuel >= transferFuel && reconDrone.fuel < reconDrone.maxFuel) {
+                    drone.cargoFuel -= transferFuel;
+                    reconDrone.fuel = std::min(reconDrone.maxFuel, reconDrone.fuel + transferFuel);
                 }
+
+                if (reconDrone.fuel >= reconDrone.maxFuel - 2.0f) {
+                    reconDrone.fuel = reconDrone.maxFuel;
+                    reconDrone.state = DroneState::PATROL;
+                    reconDrone.hasRendezvous = false;
+                    reconDrone.assignedSupportId = -1;
+                    drone.servicingReconId = -1;
+                    drone.isResupplyBeamActive = false;
+
+                    char buf[160];
+                    snprintf(buf, sizeof(buf), "[RENDEZVOUS SUCCESS] Support #%d refueled Recon #%d 100%% at Mid-Air Rendezvous Point!", drone.id, reconDrone.id);
+                    LogTerminal(buf);
+                    drone.LogAction("Completed mid-air rendezvous refuel for Recon #" + std::to_string(reconDrone.id));
+                    reconDrone.LogAction("Refueled 100% mid-air at Rendezvous Point. Resuming sector sweep.");
+                }
+            } else {
+                drone.state = DroneState::MOVING_TO_TARGET;
+                drone.isResupplyBeamActive = false;
             }
+            return;
         }
     }
 
-    if (needyTF && (drone.cargoFuel > 0.0f || drone.cargoAmmo > 0.0f)) {
+    // --- PRIORITY #3: COMBAT MEDIC ESCORT & 100% FULL TASK FORCE REFUEL/REPAIR ---
+    Drone* needyTF = nullptr;
+
+    if (drone.servicingTFId != -1) {
+        for (auto& d : drones) {
+            if (d.id == drone.servicingTFId && !d.isDestroyed) {
+                needyTF = &d;
+                break;
+            }
+        }
+        if (needyTF == nullptr) drone.servicingTFId = -1;
+    }
+
+    if (needyTF == nullptr) {
+        float lowestRes = 999.0f;
+        for (auto& d : drones) {
+            if (d.role == DroneRole::TASK_FORCE && !d.isDestroyed && d.state != DroneState::IDLE_AT_BASE) {
+                if (d.assignedSupportId == -1 || d.assignedSupportId == drone.id) {
+                    if (d.state == DroneState::REQUESTING_SUPPORT || d.fuel < 50.0f || d.ammo < 30.0f || d.hp < 140.0f) {
+                        float priorityVal = d.fuel + d.ammo + d.hp;
+                        if (priorityVal < lowestRes) {
+                            lowestRes = priorityVal;
+                            needyTF = &d;
+                        }
+                    }
+                }
+            }
+        }
+        if (needyTF != nullptr) {
+            drone.servicingTFId = needyTF->id;
+            needyTF->assignedSupportId = drone.id;
+        }
+    }
+
+    if (needyTF && (drone.cargoFuel > 5.0f || drone.cargoAmmo > 5.0f)) {
         if (drone.state == DroneState::IDLE_AT_BASE) {
             drone.state = DroneState::MOVING_TO_TARGET;
-            drone.LogAction("Launched as Combat Escort to repair & resupply TF #" + std::to_string(needyTF->id));
-            LogTerminal("[SUPPORT #" + std::to_string(drone.id) + "] Launched as Combat Escort to repair & resupply Task Force #" + std::to_string(needyTF->id));
+            drone.LogAction("Launched to Midpoint Rendezvous to 100% resupply TF #" + std::to_string(needyTF->id));
+            LogTerminal("[SUPPORT #" + std::to_string(drone.id) + "] Launched to Midpoint Rendezvous to 100% resupply TF #" + std::to_string(needyTF->id));
         }
 
-        float headingRad = needyTF->yaw * DEG2RAD;
-        drone.targetPosition = (Vector3){
-            needyTF->position.x - sinf(headingRad) * 5.0f,
-            needyTF->position.y + 6.0f,
-            needyTF->position.z - cosf(headingRad) * 5.0f
-        };
+        Vector3 targetPos = needyTF->hasRendezvous ? needyTF->rendezvousPos : needyTF->position;
+        drone.targetPosition = targetPos;
 
         float dist = Vector3Distance(drone.position, needyTF->position);
 
@@ -682,9 +800,9 @@ void DroneSystemManager::UpdateSupport(Drone& drone, float dt) {
             drone.resupplyTargetPos = needyTF->position;
             needyTF->state = DroneState::RESUPPLYING_IN_AIR;
 
-            float transferFuel = dt * 30.0f;
-            float transferAmmo = dt * 40.0f;
-            float transferRepair = dt * 30.0f;
+            float transferFuel = dt * 45.0f;
+            float transferAmmo = dt * 55.0f;
+            float transferRepair = dt * 50.0f;
 
             if (drone.cargoFuel >= transferFuel && needyTF->fuel < needyTF->maxFuel) {
                 drone.cargoFuel -= transferFuel;
@@ -698,18 +816,29 @@ void DroneSystemManager::UpdateSupport(Drone& drone, float dt) {
                 needyTF->hp = std::min(needyTF->maxHp, needyTF->hp + transferRepair);
             }
 
-            if (needyTF->fuel >= 95.0f && needyTF->ammo >= 95.0f && needyTF->hp >= 95.0f) {
+            if (needyTF->fuel >= needyTF->maxFuel - 1.0f && needyTF->ammo >= needyTF->maxAmmo - 1.0f && needyTF->hp >= needyTF->maxHp - 1.0f) {
+                needyTF->fuel = needyTF->maxFuel;
+                needyTF->ammo = needyTF->maxAmmo;
+                needyTF->hp = needyTF->maxHp;
                 needyTF->state = DroneState::MOVING_TO_TARGET;
-                char buf[140];
-                snprintf(buf, sizeof(buf), "[MEDIC BEAM] Support #%d completed mid-air repair for TF #%d (HP:100%%, F:100%%)", drone.id, needyTF->id);
+                needyTF->hasRendezvous = false;
+                needyTF->assignedSupportId = -1;
+
+                drone.servicingTFId = -1;
+                drone.isResupplyBeamActive = false;
+
+                char buf[160];
+                snprintf(buf, sizeof(buf), "[100%% RESUPPLY COMPLETE] Support #%d finished 100%% refuel & rearm for TF #%d!", drone.id, needyTF->id);
                 LogTerminal(buf);
-                drone.LogAction("Completed mid-air combat repair for Task Force #" + std::to_string(needyTF->id));
+                drone.LogAction("Completed 100% full combat resupply for Task Force #" + std::to_string(needyTF->id));
+                needyTF->LogAction("100% Refueled, Rearmed & Repaired mid-air by Support #" + std::to_string(drone.id));
             }
         } else {
             drone.state = DroneState::MOVING_TO_TARGET;
             drone.isResupplyBeamActive = false;
         }
     } else {
+        drone.servicingTFId = -1;
         drone.isResupplyBeamActive = false;
         if (drone.cargoFuel <= 20.0f || drone.fuel <= 20.0f) {
             if (drone.state != DroneState::RETURNING_TO_BASE) {
@@ -753,6 +882,7 @@ void DroneSystemManager::UpdateBaseRefill(Drone& drone, float dt) {
                     drone.hasRendezvous = false;
                     drone.assignedSupportId = -1;
                     drone.servicingReconId = -1;
+                    drone.servicingTFId = -1;
                     drone.recoveringDroneId = -1;
                     drone.LogAction("Safely docked in Hangar. Refueled, rearmed & repaired 100%.");
                     char buf[128];
@@ -787,6 +917,34 @@ void DroneSystemManager::UpdateTelemetry() {
 }
 
 void DroneSystemManager::Update(float dt) {
+    // --- TIME CONTROLS & MANUAL SPAWN HOTKEYS ---
+    if (IsKeyPressed(KEY_P) || IsKeyPressed(KEY_SPACE)) {
+        TogglePause();
+    }
+    if (IsKeyPressed(KEY_EQUAL) || IsKeyPressed(KEY_KP_ADD) || IsKeyPressed(KEY_RIGHT)) {
+        IncreaseSpeed();
+    }
+    if (IsKeyPressed(KEY_MINUS) || IsKeyPressed(KEY_KP_SUBTRACT) || IsKeyPressed(KEY_LEFT)) {
+        DecreaseSpeed();
+    }
+    if (IsKeyPressed(KEY_R) && !isPaused && timeScale != 1.0f) {
+        ResetSpeed();
+    }
+
+    // Manual Hostile Spawner Hotkeys
+    if (IsKeyPressed(KEY_K)) {
+        SpawnCustomCluster(true, GetRandomValue(6, 12)); // Manual ARMED Cluster
+    }
+    if (IsKeyPressed(KEY_L)) {
+        SpawnCustomCluster(false, GetRandomValue(6, 12)); // Manual UNARMED Cluster
+    }
+    if (IsKeyPressed(KEY_J)) {
+        SpawnCustomCluster(GetRandomValue(0, 100) < 50, GetRandomValue(10, 14)); // Heavy Cluster
+    }
+
+    float effectiveDt = isPaused ? 0.0f : dt * timeScale;
+    if (effectiveDt <= 0.0f) return;
+
     // 1. Spawner & Cluster Check
     int pendingSpawns = 0;
     for (auto& c : clusters) {
@@ -828,7 +986,6 @@ void DroneSystemManager::Update(float dt) {
 
             e.isFiringCounterAttack = false;
 
-            // ONLY ARMED HOSTILES CAN FIRE SAM COUNTER-ATTACKS!
             if (e.isArmed) {
                 Drone* closestTargetDrone = nullptr;
                 float minDist = 35.0f;
@@ -847,7 +1004,7 @@ void DroneSystemManager::Update(float dt) {
                     e.isFiringCounterAttack = true;
                     e.counterAttackTargetPos = closestTargetDrone->position;
 
-                    closestTargetDrone->hp -= dt * 12.0f;
+                    closestTargetDrone->hp -= effectiveDt * 12.0f;
 
                     if (closestTargetDrone->hp <= 0.0f) {
                         closestTargetDrone->hp = 0.0f;
@@ -868,7 +1025,7 @@ void DroneSystemManager::Update(float dt) {
             }
 
             if (e.panicTimer > 0.0f) {
-                e.panicTimer -= dt;
+                e.panicTimer -= effectiveDt;
 
                 Vector3 fleeDir = Vector3Subtract(e.position, e.fleeTarget);
                 float dist = Vector3Length(fleeDir);
@@ -880,48 +1037,48 @@ void DroneSystemManager::Update(float dt) {
                 } else {
                     Vector3 normDir = Vector3Scale(fleeDir, 1.0f / dist);
                     float speed = 7.5f;
-                    e.position = Vector3Add(e.position, Vector3Scale(normDir, speed * dt));
+                    e.position = Vector3Add(e.position, Vector3Scale(normDir, speed * effectiveDt));
 
                     float distFromCenter = Vector3Distance(e.position, c.centerPosition);
                     if (distFromCenter > 25.0f) {
                         Vector3 backToCenter = Vector3Normalize(Vector3Subtract(c.centerPosition, e.position));
-                        e.position = Vector3Add(e.position, Vector3Scale(backToCenter, speed * dt * 1.5f));
+                        e.position = Vector3Add(e.position, Vector3Scale(backToCenter, speed * effectiveDt * 1.5f));
                     }
                 }
             }
         }
     }
 
-    // 3. Drone Movement & Speed Ratios (Recon: 4x=32m/s, Task Force: 2x=16m/s, Support: 1x=8m/s)
+    // 3. Drone Movement & Tactical Speed Ratios
     for (auto& d : drones) {
         if (d.isDestroyed) {
             if (d.position.y > 0.4f) {
-                d.position.y += d.velocity.y * dt;
+                d.position.y += d.velocity.y * effectiveDt;
                 if (d.position.y < 0.4f) d.position.y = 0.4f;
             }
             continue;
         }
 
-        d.rotorAngle += dt * 720.0f;
+        d.rotorAngle += effectiveDt * 720.0f;
         if (d.rotorAngle > 360.0f) d.rotorAngle -= 360.0f;
 
         switch (d.role) {
-            case DroneRole::RECON:      UpdateRecon(d, dt); break;
-            case DroneRole::TASK_FORCE: UpdateTaskForce(d, dt); break;
-            case DroneRole::SUPPORT:    UpdateSupport(d, dt); break;
+            case DroneRole::RECON:      UpdateRecon(d, effectiveDt); break;
+            case DroneRole::TASK_FORCE: UpdateTaskForce(d, effectiveDt); break;
+            case DroneRole::SUPPORT:    UpdateSupport(d, effectiveDt); break;
         }
 
-        UpdateBaseRefill(d, dt);
+        UpdateBaseRefill(d, effectiveDt);
 
         if (d.state == DroneState::IDLE_AT_BASE) {
-            d.position = Vector3Lerp(d.position, d.baseDockPos, dt * 5.0f);
+            d.position = Vector3Lerp(d.position, d.baseDockPos, effectiveDt * 5.0f);
             d.velocity = (Vector3){ 0, 0, 0 };
             d.pitch = 0.0f;
             d.roll = 0.0f;
             continue;
         }
 
-        float maxSpeed = (d.role == DroneRole::RECON) ? 32.0f : ((d.role == DroneRole::TASK_FORCE) ? 16.0f : 8.0f);
+        float maxSpeed = (d.role == DroneRole::RECON) ? 32.0f : 16.0f;
 
         Vector3 moveDir = Vector3Subtract(d.targetPosition, d.position);
         float dist = Vector3Length(moveDir);
@@ -930,19 +1087,19 @@ void DroneSystemManager::Update(float dt) {
             Vector3 normDir = Vector3Scale(moveDir, 1.0f / dist);
             Vector3 desiredVel = Vector3Scale(normDir, maxSpeed);
 
-            d.velocity = Vector3Lerp(d.velocity, desiredVel, dt * 2.5f);
-            d.position = Vector3Add(d.position, Vector3Scale(d.velocity, dt));
+            d.velocity = Vector3Lerp(d.velocity, desiredVel, effectiveDt * 2.5f);
+            d.position = Vector3Add(d.position, Vector3Scale(d.velocity, effectiveDt));
 
             d.yaw = atan2f(d.velocity.x, d.velocity.z) * RAD2DEG;
             float speedVal = Vector3Length(d.velocity);
             d.pitch = std::clamp(speedVal * 1.1f, -20.0f, 20.0f);
         } else {
-            d.velocity = Vector3Lerp(d.velocity, (Vector3){ 0.0f, 0.0f, 0.0f }, dt * 3.5f);
-            d.position = Vector3Add(d.position, Vector3Scale(d.velocity, dt));
+            d.velocity = Vector3Lerp(d.velocity, (Vector3){ 0.0f, 0.0f, 0.0f }, effectiveDt * 3.5f);
+            d.position = Vector3Add(d.position, Vector3Scale(d.velocity, effectiveDt));
             d.pitch = std::clamp(d.pitch * 0.9f, -2.0f, 2.0f);
         }
 
-        ApplyFlankingAndSeparation(d, dt);
+        ApplyFlankingAndSeparation(d, effectiveDt);
     }
 
     UpdateTelemetry();
@@ -984,10 +1141,20 @@ void DroneSystemManager::DrawClusters3D() const {
 
         DrawCircle3D(c.centerPosition, 18.0f, (Vector3){ 1, 0, 0 }, 90.0f, ringColor);
 
+        // 3D FLOATING OVERHEAD BILLBOARD FOR DISCOVERED HOSTILE CLUSTERS
+        if (c.status == ClusterStatus::REPORTED || c.status == ClusterStatus::ENGAGED) {
+            Vector3 bannerPos = (Vector3){ c.centerPosition.x, 14.0f, c.centerPosition.z };
+            Color bannerCol = (c.armedCount > 0) ? (Color){ 255, 30, 30, 255 } : (Color){ 240, 160, 20, 255 };
+
+            DrawCube(bannerPos, 24.0f, 4.0f, 0.4f, (Color){ 10, 15, 25, 230 });
+            DrawCubeWires(bannerPos, 24.2f, 4.2f, 0.5f, bannerCol);
+
+            DrawLine3D(c.centerPosition, bannerPos, bannerCol);
+        }
+
         for (const auto& e : c.enemies) {
             if (!e.isAlive) continue;
 
-            // ARMED Hostiles = CRIMSON RED, UNARMED Hostiles = AMBER ORANGE
             Color enemyColor = e.isArmed ? (Color){ 255, 30, 30, 255 } : (Color){ 240, 150, 20, 255 };
             Color wireColor = e.isArmed ? MAROON : GOLD;
 
@@ -1011,13 +1178,16 @@ void DroneSystemManager::DrawClusters3D() const {
         }
     }
 
-    // PROMINENT NEON CYAN 3D DETECTION CIRCLES WITH 50% EARLY REPORT BOUNDARY RING
     for (const auto& d : drones) {
         if (d.isDestroyed) continue;
         if (d.role == DroneRole::RECON && d.state != DroneState::IDLE_AT_BASE) {
             DrawCircle3D(d.position, 140.0f, (Vector3){ 1, 0, 0 }, 90.0f, Fade(SKYBLUE, 0.35f));
             DrawCircle3D(d.position, 140.5f, (Vector3){ 1, 0, 0 }, 90.0f, SKYBLUE);
-            DrawCircle3D(d.position, 70.0f, (Vector3){ 1, 0, 0 }, 90.0f, Fade(GOLD, 0.40f)); // 50% Half-Radius Reporting Zone
+            DrawCircle3D(d.position, 70.0f, (Vector3){ 1, 0, 0 }, 90.0f, Fade(GOLD, 0.40f));
+        }
+        if (d.hasRendezvous) {
+            DrawCircle3D(d.rendezvousPos, 12.0f, (Vector3){ 1, 0, 0 }, 90.0f, GOLD);
+            DrawCircle3D(d.rendezvousPos, 6.0f, (Vector3){ 1, 0, 0 }, 90.0f, YELLOW);
         }
     }
 }
@@ -1157,7 +1327,7 @@ void DroneSystemManager::DrawDroneInspector2D() const {
     if (idx >= 0 && idx < (int)drones.size()) {
         const auto& d = drones[idx];
 
-        const char* roleStr = (d.role == DroneRole::RECON) ? "RECON SCOUT (4x Speed, 2x Fuel)" : ((d.role == DroneRole::TASK_FORCE) ? "TASK FORCE INTERCEPTOR (2x Speed, 1x Fuel)" : "SUPPORT LOGISTICS (1x Speed, 4x Fuel)");
+        const char* roleStr = (d.role == DroneRole::RECON) ? "RECON SCOUT (4x Speed, 160 HP)" : ((d.role == DroneRole::TASK_FORCE) ? "TASK FORCE INTERCEPTOR (2x Speed, 200 HP)" : "SUPPORT LOGISTICS (2x Speed Buff, 300 HP)");
         Color roleCol = (d.role == DroneRole::RECON) ? SKYBLUE : ((d.role == DroneRole::TASK_FORCE) ? ORANGE : LIME);
 
         DrawCustomText(TextFormat("DRONE #%d - %s", d.id, roleStr), panelX + 20, panelY + 50, 15.0f, roleCol);
@@ -1170,7 +1340,7 @@ void DroneSystemManager::DrawDroneInspector2D() const {
                 case DroneState::SCANNING: stateStr = "SCANNING TARGET (50% RADAR ZONE)"; break;
                 case DroneState::MOVING_TO_TARGET: stateStr = "MOVING TO TARGET"; break;
                 case DroneState::ENGAGING: stateStr = "ENGAGING HOSTILES"; break;
-                case DroneState::REQUESTING_SUPPORT: stateStr = "REQUESTING AERIAL SUPPORT"; break;
+                case DroneState::REQUESTING_SUPPORT: stateStr = "REQUESTING AERIAL SUPPORT / RENDEZVOUS"; break;
                 case DroneState::RESUPPLYING_IN_AIR: stateStr = "RESUPPLYING / REPAIRING IN AIR"; break;
                 case DroneState::RETURNING_TO_BASE: stateStr = "RETURNING TO HANGAR"; break;
                 default: stateStr = "IDLE AT BASE"; break;
@@ -1183,7 +1353,7 @@ void DroneSystemManager::DrawDroneInspector2D() const {
 
         DrawCustomText("HULL INTEGRITY:", panelX + 20, panelY + 140, 13.0f, GREEN);
         DrawRectangle(panelX + 150, panelY + 142, 230, 14, DARKGRAY);
-        DrawRectangle(panelX + 150, panelY + 142, (int)(230 * (std::max(0.0f, d.hp) / d.maxHp)), 14, d.hp < 30.0f ? RED : (d.hp < 70.0f ? YELLOW : LIME));
+        DrawRectangle(panelX + 150, panelY + 142, (int)(230 * (std::max(0.0f, d.hp) / d.maxHp)), 14, d.hp < 40.0f ? RED : (d.hp < 100.0f ? YELLOW : LIME));
         DrawCustomText(TextFormat("%.0f / %.0f", std::max(0.0f, d.hp), d.maxHp), panelX + 390, panelY + 140, 11.0f, RAYWHITE);
 
         DrawCustomText("FUEL CAPACITY:", panelX + 20, panelY + 165, 13.0f, YELLOW);
@@ -1220,6 +1390,72 @@ void DroneSystemManager::DrawDroneInspector2D() const {
     DrawCustomText("[1..9] Select Drone | [I] Close Inspector", panelX + panelW / 2 - 120, panelY + panelH - 25, 12.0f, GRAY);
 }
 
+// --- NEW HUD PANEL: ACTIVE TASK FORCE MISSIONS & SQUAD ASSIGNMENTS ---
+void DroneSystemManager::DrawActiveMissionsPanel2D() const {
+    int panelW = 340;
+    int panelH = 220;
+    int panelX = 20;
+    int panelY = 215;
+
+    DrawRectangle(panelX, panelY, panelW, panelH, (Color){ 4, 10, 20, 245 });
+    DrawRectangleLines(panelX, panelY, panelW, panelH, GOLD);
+    DrawRectangleLines(panelX + 2, panelY + 2, panelW - 4, panelH - 4, Fade(GOLD, 0.35f));
+
+    DrawCustomText("ACTIVE TASK FORCE MISSIONS", panelX + 15, panelY + 10, 14.0f, GOLD);
+    DrawLine(panelX + 15, panelY + 28, panelX + panelW - 15, panelY + 28, GOLD);
+
+    int startY = panelY + 34;
+    int activeMissions = 0;
+
+    for (const auto& c : clusters) {
+        if (c.status == ClusterStatus::CLEARED) continue; // Cleared missions automatically disappear!
+        if (c.status == ClusterStatus::REPORTED || c.status == ClusterStatus::ENGAGED) {
+            activeMissions++;
+
+            std::string tfList = "";
+            std::string supList = "";
+            int tfCount = 0;
+            int supCount = 0;
+
+            for (const auto& d : drones) {
+                if (d.assignedClusterId == c.id && !d.isDestroyed) {
+                    if (d.role == DroneRole::TASK_FORCE) {
+                        tfCount++;
+                        if (!tfList.empty()) tfList += ",";
+                        tfList += "#" + std::to_string(d.id);
+                    } else if (d.role == DroneRole::SUPPORT) {
+                        supCount++;
+                        if (!supList.empty()) supList += ",";
+                        supList += "#" + std::to_string(d.id);
+                    }
+                }
+            }
+
+            Color typeCol = (c.armedCount > 0) ? (Color){ 255, 60, 60, 255 } : ORANGE;
+            const char* typeStr = (c.armedCount > 0) ? "ARMED" : "UNARMED";
+
+            DrawCustomText(TextFormat("MISSION #%d - CLUSTER #%d (%s)", activeMissions, c.id, typeStr), panelX + 12, startY, 12.0f, typeCol);
+            DrawCustomText(TextFormat("Units: %d | Threat Mag: %d (%d Armed, %d Unarmed)", c.remainingMagnitude, c.calculatedThreatMagnitude, c.armedCount, c.unarmedCount), panelX + 12, startY + 16, 11.0f, RAYWHITE);
+
+            std::string assignStr = "Strike Team: ";
+            if (tfCount > 0) assignStr += std::to_string(tfCount) + "x Task Force (" + tfList + ")";
+            else assignStr += "En route / Dispatching";
+            if (supCount > 0) assignStr += " | " + std::to_string(supCount) + "x Support (" + supList + ")";
+
+            DrawCustomText(assignStr.c_str(), panelX + 12, startY + 32, 10.0f, LIME);
+            DrawLine(panelX + 12, startY + 48, panelX + panelW - 12, startY + 48, Fade(GRAY, 0.4f));
+
+            startY += 54;
+            if (activeMissions >= 3) break;
+        }
+    }
+
+    if (activeMissions == 0) {
+        DrawCustomText("[ NO ACTIVE STRIKE MISSIONS ]", panelX + 50, panelY + 100, 13.0f, GRAY);
+        DrawCustomText("Fleet Standby / Recon Sector Sweep Active", panelX + 30, panelY + 122, 11.0f, DARKGRAY);
+    }
+}
+
 void DroneSystemManager::Draw2DHUD() const {
     int screenWidth = GetScreenWidth();
     int screenHeight = GetScreenHeight();
@@ -1250,14 +1486,19 @@ void DroneSystemManager::Draw2DHUD() const {
         DrawCustomText(TextFormat("Targets Neutralized: %d Units", telemetry.eliminatedTargetsCount), leftX + 15, leftY + 102, 13.0f, GREEN);
         DrawCustomText(TextFormat("Downed Wrecks / SAR: %d Drones", telemetry.destroyedDronesCount), leftX + 15, leftY + 122, 13.0f, RED);
 
-        DrawCustomText("Threat Weight: Armed = 1.0 | Unarmed = 0.5", leftX + 15, leftY + 146, 10.0f, LIGHTGRAY);
-        DrawCustomText("Base: 3D Hangar Base (0,0,0) - 14 Helipads", leftX + 15, leftY + 164, 11.0f, GRAY);
+        DrawCustomText("Threat Weight: Armed = 0.5 | Unarmed = 0.25", leftX + 15, leftY + 146, 10.0f, LIGHTGRAY);
+        DrawCustomText("Fleet HP: REC 160 | TF 200 | SUP 300", leftX + 15, leftY + 164, 11.0f, GRAY);
     }
 
-    // 2. Top-Right Fleet Resource Panel (ALL 14 DRONES)
+    // NEW HUD PANEL: ACTIVE TASK FORCE MISSIONS & SQUAD ASSIGNMENTS
+    if (showMissionsPanel) {
+        DrawActiveMissionsPanel2D();
+    }
+
+    // 2. Top-Right Fleet Resource Panel (9 DRONES)
     if (showResourcePanel) {
         int rightW = 380;
-        int rightH = 370;
+        int rightH = 260;
         int rightX = screenWidth - rightW - 20;
         int rightY = 15;
 
@@ -1265,13 +1506,13 @@ void DroneSystemManager::Draw2DHUD() const {
         DrawRectangleLines(rightX, rightY, rightW, rightH, ORANGE);
         DrawRectangleLines(rightX + 2, rightY + 2, rightW - 4, rightH - 4, Fade(ORANGE, 0.35f));
 
-        DrawCustomText("FLEET SENSORS & RATIOS (14 DRONES)", rightX + 15, rightY + 10, 14.0f, ORANGE);
+        DrawCustomText("FLEET SENSORS & STATUS (9 DRONES)", rightX + 15, rightY + 10, 14.0f, ORANGE);
         DrawLine(rightX + 15, rightY + 28, rightX + rightW - 15, rightY + 28, ORANGE);
 
         int startY = rightY + 34;
         for (int i = 0; i < (int)drones.size(); i++) {
             const auto& d = drones[i];
-            const char* roleStr = (d.role == DroneRole::RECON) ? "[REC 4x]" : ((d.role == DroneRole::TASK_FORCE) ? "[TSK 2x]" : "[SUP 1x]");
+            const char* roleStr = (d.role == DroneRole::RECON) ? "[REC 4x]" : ((d.role == DroneRole::TASK_FORCE) ? "[TSK 2x]" : "[SUP 2x]");
             Color roleCol = (d.role == DroneRole::RECON) ? SKYBLUE : ((d.role == DroneRole::TASK_FORCE) ? ORANGE : LIME);
 
             const char* tag = "IDLE";
@@ -1297,7 +1538,7 @@ void DroneSystemManager::Draw2DHUD() const {
 
             DrawCustomText("H", rightX + 165, startY, 10.0f, LIGHTGRAY);
             DrawRectangle(rightX + 175, startY + 2, 45, 8, DARKGRAY);
-            DrawRectangle(rightX + 175, startY + 2, (int)(45 * (std::max(0.0f, d.hp) / d.maxHp)), 8, d.hp < 30.0f ? RED : (d.hp < 70.0f ? YELLOW : LIME));
+            DrawRectangle(rightX + 175, startY + 2, (int)(45 * (std::max(0.0f, d.hp) / d.maxHp)), 8, d.hp < 40.0f ? RED : (d.hp < 100.0f ? YELLOW : LIME));
 
             DrawCustomText("F", rightX + 228, startY, 10.0f, LIGHTGRAY);
             DrawRectangle(rightX + 240, startY + 2, 50, 8, DARKGRAY);
@@ -1315,9 +1556,10 @@ void DroneSystemManager::Draw2DHUD() const {
         }
     }
 
+    // 3. Top-Center Camera & Time Controls Banner
     if (showCameraBanner) {
-        int bannerW = 500;
-        int bannerH = 55;
+        int bannerW = 620;
+        int bannerH = 65;
         int bannerX = (screenWidth - bannerW) / 2;
         int bannerY = 15;
 
@@ -1325,15 +1567,20 @@ void DroneSystemManager::Draw2DHUD() const {
         DrawRectangleLines(bannerX, bannerY, bannerW, bannerH, GOLD);
         DrawRectangleLines(bannerX + 2, bannerY + 2, bannerW - 4, bannerH - 4, Fade(GOLD, 0.35f));
 
-        std::string camTitle = "CAMERA VIEW: " + GetActiveCameraModeName();
-        Color modeColor = (activeCameraMode == 0) ? SKYBLUE : ((activeCameraMode <= 2) ? SKYBLUE : ((activeCameraMode >= 13) ? LIME : ORANGE));
+        std::string camTitle = "CAMERA: " + GetActiveCameraModeName();
+        Color modeColor = (activeCameraMode == 0) ? SKYBLUE : ((activeCameraMode <= 2) ? SKYBLUE : ((activeCameraMode >= 8) ? LIME : ORANGE));
         
-        float titleW = fontLoaded ? MeasureTextEx(customFont, camTitle.c_str(), 15.0f, 1.0f).x : (float)MeasureText(camTitle.c_str(), 15);
-        DrawCustomText(camTitle.c_str(), bannerX + (bannerW - titleW) / 2.0f, bannerY + 8, 15.0f, modeColor);
+        float titleW = fontLoaded ? MeasureTextEx(customFont, camTitle.c_str(), 14.0f, 1.0f).x : (float)MeasureText(camTitle.c_str(), 14);
+        DrawCustomText(camTitle.c_str(), bannerX + (bannerW - titleW) / 2.0f, bannerY + 6, 14.0f, modeColor);
 
-        const char* hintMsg = "[TAB] Cycle | [1..9] Track | [M] Full Map | [I] Drone Inspector | [F1-F8] UI";
+        const char* timeStr = isPaused ? "[P] PAUSED" : TextFormat("[P] Pause | [+] Fast (%.1fx) | [-] Slow | [K] Armed | [L] Unarmed", timeScale);
+        Color timeCol = isPaused ? RED : (timeScale > 1.0f ? LIME : (timeScale < 1.0f ? YELLOW : RAYWHITE));
+        float timeW = fontLoaded ? MeasureTextEx(customFont, timeStr, 12.0f, 1.0f).x : (float)MeasureText(timeStr, 12);
+        DrawCustomText(timeStr, bannerX + (bannerW - timeW) / 2.0f, bannerY + 26, 12.0f, timeCol);
+
+        const char* hintMsg = "[TAB] View | [M] Map | [I] Telemetry | [F1-F8] Panels";
         float hintW = fontLoaded ? MeasureTextEx(customFont, hintMsg, 11.0f, 1.0f).x : (float)MeasureText(hintMsg, 11);
-        DrawCustomText(hintMsg, bannerX + (bannerW - hintW) / 2.0f, bannerY + 30, 11.0f, YELLOW);
+        DrawCustomText(hintMsg, bannerX + (bannerW - hintW) / 2.0f, bannerY + 44, 11.0f, GOLD);
     }
 
     if (showTacticalMap) {
@@ -1344,10 +1591,10 @@ void DroneSystemManager::Draw2DHUD() const {
         DrawTacticalMap2D(mapX, mapY, mapW, mapH, false);
     }
 
-    // 5. TACTICAL OPERATIONAL COMMAND TERMINAL LOGS (RESIZED & ENRICHED LOGS)
+    // 5. TACTICAL OPERATIONAL COMMAND TERMINAL LOGS (EXPANDED TO 540x380px!)
     if (showTerminalPanel) {
-        int termW = 460; // Narrower width for clean left alignment
-        int termH = 310; // Taller height to display 15+ lines of logs
+        int termW = 540;
+        int termH = 380;
         int termX = 20;
         int termY = screenHeight - termH - 20;
 
@@ -1358,14 +1605,65 @@ void DroneSystemManager::Draw2DHUD() const {
         DrawCustomText("TACTICAL OPERATIONAL COMMAND LOGS", termX + 15, termY + 10, 14.0f, LIME);
         DrawLine(termX + 15, termY + 28, termX + termW - 15, termY + 28, LIME);
 
-        int logY = termY + 34;
-        int maxLines = 15;
+        int logY = termY + 36;
+        int maxLines = 19;
         int showCount = std::min(maxLines, (int)telemetry.terminalLogs.size());
         int startIndex = (int)telemetry.terminalLogs.size() - showCount;
 
         for (int i = startIndex; i < (int)telemetry.terminalLogs.size(); i++) {
             DrawCustomText(telemetry.terminalLogs[i].c_str(), termX + 12, logY, 11.0f, (Color){ 0, 255, 120, 255 });
             logY += 17;
+        }
+    }
+
+    // 6. FLOATING 2D OVERHEAD OVERLAY FOR DISCOVERED HOSTILE CLUSTERS
+    Camera3D currentCam;
+    if (activeCameraMode == 0) {
+        Vector3 forward = (Vector3){ sinf(freeCamYaw) * cosf(freeCamPitch), -sinf(freeCamPitch), cosf(freeCamYaw) * cosf(freeCamPitch) };
+        currentCam.position = freeCamPos;
+        currentCam.target = Vector3Add(freeCamPos, forward);
+        currentCam.up = (Vector3){ 0, 1, 0 };
+        currentCam.fovy = 60.0f;
+        currentCam.projection = CAMERA_PERSPECTIVE;
+    } else {
+        int droneIdx = activeCameraMode - 1;
+        if (droneIdx >= 0 && droneIdx < (int)drones.size()) {
+            const auto& targetDrone = drones[droneIdx];
+            float camDist = 16.0f;
+            Vector3 orbitOffset = (Vector3){
+                sinf(trackCamYaw) * cosf(trackCamPitch) * camDist,
+                sinf(trackCamPitch) * camDist + 3.0f,
+                cosf(trackCamYaw) * cosf(trackCamPitch) * camDist
+            };
+            currentCam.position = Vector3Add(targetDrone.position, orbitOffset);
+            currentCam.target = (Vector3){ targetDrone.position.x, targetDrone.position.y + 1.2f, targetDrone.position.z };
+            currentCam.up = (Vector3){ 0, 1, 0 };
+            currentCam.fovy = 55.0f;
+            currentCam.projection = CAMERA_PERSPECTIVE;
+        }
+    }
+
+    for (const auto& c : clusters) {
+        if (c.status == ClusterStatus::CLEARED) continue;
+        if (c.status == ClusterStatus::REPORTED || c.status == ClusterStatus::ENGAGED) {
+            Vector3 bannerPos3D = (Vector3){ c.centerPosition.x, 14.0f, c.centerPosition.z };
+            Vector2 screenPos = GetWorldToScreen(bannerPos3D, currentCam);
+
+            if (screenPos.x > 0 && screenPos.x < screenWidth && screenPos.y > 0 && screenPos.y < screenHeight) {
+                Color borderCol = (c.armedCount > 0) ? (Color){ 255, 40, 40, 255 } : (Color){ 240, 160, 20, 255 };
+
+                int boxW = 220;
+                int boxH = 42;
+                int boxX = (int)screenPos.x - boxW / 2;
+                int boxY = (int)screenPos.y - boxH / 2;
+
+                DrawRectangle(boxX, boxY, boxW, boxH, (Color){ 4, 10, 20, 235 });
+                DrawRectangleLines(boxX, boxY, boxW, boxH, borderCol);
+
+                const char* typeStr = (c.armedCount > 0) ? "ARMED (Silahlı)" : "UNARMED (Silahsız)";
+                DrawCustomText(TextFormat("CLUSTER #%d: %d UNITS (%s)", c.id, c.remainingMagnitude, typeStr), boxX + 8, boxY + 6, 10.0f, borderCol);
+                DrawCustomText(TextFormat("Threat Mag: %d (%d Armed, %d Unarmed)", c.calculatedThreatMagnitude, c.armedCount, c.unarmedCount), boxX + 8, boxY + 22, 10.0f, RAYWHITE);
+            }
         }
     }
 

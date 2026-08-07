@@ -95,6 +95,7 @@ struct Drone {
     bool hasRendezvous = false;
     int assignedSupportId = -1;
     int servicingReconId = -1;
+    int servicingTFId = -1;
     int recoveringDroneId = -1;
     bool isBeingRecovered = false;
 
@@ -183,6 +184,9 @@ private:
     float scanTimer;
     float patrolAngle;
 
+    float timeScale = 1.0f;
+    bool isPaused = false;
+
     // Fleet Camera Controls
     int activeCameraMode; // 0 = Free Flight Cam, 1..14 = Tracking Drones 1..14
     Vector3 freeCamPos;
@@ -199,11 +203,28 @@ private:
     bool showTelemetryPanel = true;
     bool showResourcePanel = true;
     bool showTerminalPanel = true;
+    bool showMissionsPanel = true;
     bool showCameraBanner = true;
     bool showTacticalMap = true;
     bool isMapFullscreen = false;
     bool showDroneInspector = false;
     int inspectorDroneId = 1;
+
+    void DrawActiveMissionsPanel2D() const;
+
+    float GetTimeScale() const { return isPaused ? 0.0f : timeScale; }
+    bool IsPaused() const { return isPaused; }
+    void TogglePause() { isPaused = !isPaused; LogTerminal(isPaused ? "[SIM CONTROL] Simulation PAUSED." : "[SIM CONTROL] Simulation RESUMED."); }
+    void IncreaseSpeed() {
+        if (timeScale < 7.9f) timeScale *= 2.0f;
+        char buf[64]; snprintf(buf, sizeof(buf), "[SIM CONTROL] Speed increased: %.2fx", timeScale); LogTerminal(buf);
+    }
+    void DecreaseSpeed() {
+        if (timeScale > 0.3f) timeScale *= 0.5f;
+        char buf[64]; snprintf(buf, sizeof(buf), "[SIM CONTROL] Speed decreased: %.2fx", timeScale); LogTerminal(buf);
+    }
+    void ResetSpeed() { timeScale = 1.0f; isPaused = false; LogTerminal("[SIM CONTROL] Speed reset to 1.0x Normal."); }
+    void SpawnCustomCluster(bool forceArmed, int forceMag = 0);
 
     void DrawCustomText(const char* text, float posX, float posY, float fontSize, Color color) const;
 
