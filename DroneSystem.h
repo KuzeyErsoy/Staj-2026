@@ -33,6 +33,7 @@ struct Enemy {
     Vector3 fleeTarget = { 0.0f, 0.0f, 0.0f };
 
     // Hostile Anti-Drone Counter-Attack
+    bool isArmed = true; // Armed (1.0 Mag weight, fires back) vs Unarmed (0.5 Mag weight, non-combatant/fleeing)
     bool isFiringCounterAttack = false;
     Vector3 counterAttackTargetPos = { 0.0f, 0.0f, 0.0f };
 };
@@ -42,6 +43,9 @@ struct EnemyCluster {
     Vector3 centerPosition;
     int initialMagnitude;   // Gruptaki toplam düşman sayısı
     int remainingMagnitude; // Anlık canlı düşman sayısı
+    int armedCount = 0;
+    int unarmedCount = 0;
+    int calculatedThreatMagnitude = 0; // Armed = 1.0, Unarmed = 0.5
     ClusterStatus status = ClusterStatus::UNDETECTED;
     std::vector<Enemy> enemies;
 };
@@ -91,6 +95,8 @@ struct Drone {
     bool hasRendezvous = false;
     int assignedSupportId = -1;
     int servicingReconId = -1;
+    int recoveringDroneId = -1;
+    bool isBeingRecovered = false;
 
     void LogAction(const std::string& msg) {
         int totalSecs = (int)GetTime();
