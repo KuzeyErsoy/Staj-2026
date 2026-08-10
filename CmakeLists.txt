@@ -10,19 +10,25 @@ add_subdirectory(thirdparty/raylib)
 
 add_executable(${PROJECT_NAME}
     main.cpp
-    Player.cpp
-    Map.cpp
-    CameraController.cpp
-    Collectible.cpp
-    Radar.cpp
-    ParticleSystem.cpp
-    AudioManager.cpp
-    Enemy.cpp
-    SaveSystem.cpp
-    Drone.cpp
     DroneSystem.cpp
+
+    # Legacy Game Code (Archived in kullanılmayan/)
+    kullanılmayan/Player.cpp
+    kullanılmayan/Map.cpp
+    kullanılmayan/CameraController.cpp
+    kullanılmayan/Collectible.cpp
+    kullanılmayan/Radar.cpp
+    kullanılmayan/ParticleSystem.cpp
+    kullanılmayan/AudioManager.cpp
+    kullanılmayan/Enemy.cpp
+    kullanılmayan/SaveSystem.cpp
+    kullanılmayan/Drone.cpp
 )
 
+target_include_directories(${PROJECT_NAME} PRIVATE 
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/kullanılmayan
+)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE raylib)
 

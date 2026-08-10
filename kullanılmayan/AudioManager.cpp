@@ -1,10 +1,7 @@
 #include "AudioManager.h"
-#include <math.h>
-#include <stdlib.h>
-
-#ifndef PI
-#define PI 3.14159265358979323846f
-#endif
+#include "raymath.h"
+#include <cmath>
+#include <cstdlib>
 
 AudioManager& AudioManager::Instance() {
     static AudioManager instance;

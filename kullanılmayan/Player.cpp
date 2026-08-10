@@ -1,6 +1,7 @@
 #include "Player.h"
 #include "AudioManager.h"
-#include <math.h>
+#include <cmath>
+#include <string>
 
 Player::Player(Vector3 startPos) {
   position = startPos;
@@ -31,11 +32,22 @@ Player::Player(Vector3 startPos) {
   moveSpeedMultiplier = 1.0f;
   dashCooldownMultiplier = 1.0f;
 
-  model = LoadModel("../resources/character/character-a.obj");
-  texture = LoadTexture("../resources/character/texture-a.png");
+  std::string modelPath = "resources/character/character-a.obj";
+  std::string texturePath = "resources/character/texture-a.png";
 
-  if (model.meshCount > 0 && texture.id > 0) {
-    model.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = texture;
+  if (!FileExists(modelPath.c_str())) {
+    modelPath = "../resources/character/character-a.obj";
+    texturePath = "../resources/character/texture-a.png";
+  }
+
+  if (FileExists(modelPath.c_str())) {
+    model = LoadModel(modelPath.c_str());
+    if (FileExists(texturePath.c_str())) {
+      texture = LoadTexture(texturePath.c_str());
+      if (model.meshCount > 0 && texture.id > 0) {
+        model.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = texture;
+      }
+    }
   }
 }
 

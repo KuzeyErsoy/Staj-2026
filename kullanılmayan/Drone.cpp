@@ -4,10 +4,6 @@
 #include "AudioManager.h"
 #include <math.h>
 
-#ifndef PI
-#define PI 3.14159265358979323846f
-#endif
-
 Drone::Drone(Vector3 startPos) {
     position = startPos;
     velocity = (Vector3){ 0.0f, 0.0f, 0.0f };
@@ -26,33 +22,9 @@ Drone::Drone(Vector3 startPos) {
     rotorAngle = 0.0f;
     hoverSinTimer = 0.0f;
     hasModel = false;
-
-    // Check for dynamic 3D Drone Model
-    std::string modelPath = "resources/drone/drone.obj";
-    std::string texturePath = "resources/drone/texture.png";
-
-    if (!FileExists(modelPath.c_str())) {
-        modelPath = "../resources/drone/drone.obj";
-        texturePath = "../resources/drone/texture.png";
-    }
-
-    if (FileExists(modelPath.c_str())) {
-        model = LoadModel(modelPath.c_str());
-        if (FileExists(texturePath.c_str())) {
-            texture = LoadTexture(texturePath.c_str());
-            if (model.meshCount > 0 && texture.id > 0) {
-                model.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = texture;
-            }
-        }
-        hasModel = (model.meshCount > 0);
-    }
 }
 
 Drone::~Drone() {
-    if (hasModel) {
-        UnloadTexture(texture);
-        UnloadModel(model);
-    }
 }
 
 void Drone::ToggleMode() {

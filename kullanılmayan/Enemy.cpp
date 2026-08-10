@@ -1,9 +1,6 @@
 #include "Enemy.h"
-#include <math.h>
-
-#ifndef PI
-#define PI 3.14159265358979323846f
-#endif
+#include "raymath.h"
+#include <cmath>
 
 Enemy::Enemy(Vector3 p1, Vector3 p2, float spd) {
     startPoint = p1;
