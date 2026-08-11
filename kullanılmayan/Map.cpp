@@ -66,16 +66,16 @@ bool Map::LoadLevelFromFile(const std::string& filepath) {
 
             if (typeChar == 'L') {
                 for (int h = 0; h < height; ++h) {
-                    AddBlock((Vector3){ x, h * 2.0f, z }, BLOCK_TALL);
+                    AddBlock(Vector3{ x, h * 2.0f, z }, BLOCK_TALL);
                 }
-                AddBlock((Vector3){ x, height * 2.0f, z }, BLOCK_LONG);
+                AddBlock(Vector3{ x, height * 2.0f, z }, BLOCK_LONG);
             } else if (typeChar == 'T') {
                 int totalTall = (height == 0) ? 1 : height;
                 for (int h = 0; h < totalTall; ++h) {
-                    AddBlock((Vector3){ x, h * 2.0f, z }, BLOCK_TALL);
+                    AddBlock(Vector3{ x, h * 2.0f, z }, BLOCK_TALL);
                 }
             } else if (typeChar == 'H') {
-                AddBlock((Vector3){ x, 0.5f, z }, BLOCK_HAZARD);
+                AddBlock(Vector3{ x, 0.5f, z }, BLOCK_HAZARD);
             }
 
 
@@ -103,7 +103,7 @@ void Map::AddBlock(Vector3 pos, BlockType type) {
     BoundingBox baseBounds;
     if (type == BLOCK_LONG) baseBounds = GetModelBoundingBox(modelLong);
     else if (type == BLOCK_TALL) baseBounds = GetModelBoundingBox(modelTall);
-    else if (type == BLOCK_HAZARD) baseBounds = (BoundingBox){ (Vector3){ -2.0f, -0.5f, -2.0f }, (Vector3){ 2.0f, 0.5f, 2.0f } };
+    else if (type == BLOCK_HAZARD) baseBounds = BoundingBox{ Vector3{ -2.0f, -0.5f, -2.0f }, Vector3{ 2.0f, 0.5f, 2.0f } };
 
     b.bounds.min = Vector3Add(baseBounds.min, pos);
     b.bounds.max = Vector3Add(baseBounds.max, pos);
@@ -118,8 +118,8 @@ void Map::Draw() {
         } else if (block.type == BLOCK_TALL) {
             DrawModel(modelTall, block.position, 1.0f, WHITE);
         } else if (block.type == BLOCK_HAZARD) {
-            DrawCubeV(block.position, (Vector3){ 4.0f, 1.0f, 4.0f }, RED);
-            DrawCubeWiresV(block.position, (Vector3){ 4.0f, 1.0f, 4.0f }, MAROON);
+            DrawCubeV(block.position, Vector3{ 4.0f, 1.0f, 4.0f }, RED);
+            DrawCubeWiresV(block.position, Vector3{ 4.0f, 1.0f, 4.0f }, MAROON);
         }
     }
 }

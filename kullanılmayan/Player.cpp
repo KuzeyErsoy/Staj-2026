@@ -6,14 +6,14 @@
 Player::Player(Vector3 startPos) {
   position = startPos;
   prevPosition = startPos;
-  velocity = (Vector3){0.0f, 0.0f, 0.0f};
+  velocity = Vector3{0.0f, 0.0f, 0.0f};
   rotationAngle = 0.0f;
-  scale = (Vector3){1.0f, 1.0f, 1.0f};
+  scale = Vector3{1.0f, 1.0f, 1.0f};
   isGrounded = false;
   isDashing = false;
   dashTimer = 0.0f;
   dashCooldownTimer = 0.0f;
-  dashDirection = (Vector3){0.0f, 0.0f, 0.0f};
+  dashDirection = Vector3{0.0f, 0.0f, 0.0f};
   
   hp = 100;
   maxHp = 100;
@@ -176,14 +176,14 @@ void Player::Draw() {
     }
   }
 
-  DrawModelEx(model, position, (Vector3){0.0f, 1.0f, 0.0f}, rotationAngle,
+  DrawModelEx(model, position, Vector3{0.0f, 1.0f, 0.0f}, rotationAngle,
               scale, tint);
 }
 
 BoundingBox Player::GetBounds() {
-  return (BoundingBox){
-      (Vector3){position.x - 1.0f, position.y, position.z - 1.0f},
-      (Vector3){position.x + 1.0f, position.y + 2.0f, position.z + 1.0f}};
+  return BoundingBox{
+      Vector3{position.x - 1.0f, position.y, position.z - 1.0f},
+      Vector3{position.x + 1.0f, position.y + 2.0f, position.z + 1.0f}};
 }
 
 void Player::AddExp(int amount) {

@@ -6,7 +6,7 @@
 
 Drone::Drone(Vector3 startPos) {
     position = startPos;
-    velocity = (Vector3){ 0.0f, 0.0f, 0.0f };
+    velocity = Vector3{ 0.0f, 0.0f, 0.0f };
     yaw = 0.0f;
     pitch = 0.0f;
     mode = DRONE_MODE_FOLLOW_ATTACK;
@@ -17,7 +17,7 @@ Drone::Drone(Vector3 startPos) {
     attackDamage = 25;
     isFiringLaser = false;
     laserTimer = 0.0f;
-    laserTargetPos = (Vector3){ 0.0f, 0.0f, 0.0f };
+    laserTargetPos = Vector3{ 0.0f, 0.0f, 0.0f };
 
     rotorAngle = 0.0f;
     hoverSinTimer = 0.0f;
@@ -66,7 +66,7 @@ void Drone::UpdateFollowAttackMode(Player& player, std::vector<Enemy>& enemies, 
     float targetY = player.position.y + 3.0f + sinf(hoverSinTimer * 3.0f) * 0.4f;
     float targetZ = player.position.z - cosf(player.rotationAngle * DEG2RAD) * offsetDist - 1.5f;
 
-    Vector3 targetPos = (Vector3){ targetX, targetY, targetZ };
+    Vector3 targetPos = Vector3{ targetX, targetY, targetZ };
 
     // Smooth LERP movement towards target position
     float lerpSpeed = 5.0f * dt;
@@ -97,7 +97,7 @@ void Drone::UpdateFollowAttackMode(Player& player, std::vector<Enemy>& enemies, 
         if (attackTimer <= 0.0f) {
             isFiringLaser = true;
             laserTimer = 0.20f;
-            laserTargetPos = (Vector3){ closestEnemy->position.x, closestEnemy->position.y + 0.9f, closestEnemy->position.z };
+            laserTargetPos = Vector3{ closestEnemy->position.x, closestEnemy->position.y + 0.9f, closestEnemy->position.z };
             closestEnemy->TakeDamage(attackDamage);
             attackTimer = attackCooldown;
             AudioManager::Instance().PlayHurt();
@@ -156,14 +156,14 @@ void Drone::UpdateFreeFlightMode(float dt, const Camera& camera) {
 
 void Drone::Draw() const {
     if (hasModel) {
-        DrawModelEx(model, position, (Vector3){ 0.0f, 1.0f, 0.0f }, yaw, (Vector3){ 1.0f, 1.0f, 1.0f }, WHITE);
+        DrawModelEx(model, position, Vector3{ 0.0f, 1.0f, 0.0f }, yaw, Vector3{ 1.0f, 1.0f, 1.0f }, WHITE);
     } else {
         DrawProceduralDrone();
     }
 
     // Render Laser Beam if firing
     if (isFiringLaser) {
-        Vector3 startPos = (Vector3){ position.x, position.y - 0.2f, position.z };
+        Vector3 startPos = Vector3{ position.x, position.y - 0.2f, position.z };
         DrawCylinderEx(startPos, laserTargetPos, 0.08f, 0.08f, 8, RED);
         DrawCylinderEx(startPos, laserTargetPos, 0.16f, 0.16f, 8, Fade(YELLOW, 0.6f));
         DrawSphere(laserTargetPos, 0.4f, RED);
@@ -177,11 +177,11 @@ void Drone::DrawProceduralDrone() const {
     rlRotatef(pitch, 1.0f, 0.0f, 0.0f);
 
     // Central Chassis
-    DrawSphere((Vector3){ 0.0f, 0.0f, 0.0f }, 0.6f, DARKBLUE);
-    DrawSphereWires((Vector3){ 0.0f, 0.0f, 0.0f }, 0.62f, 8, 8, SKYBLUE);
+    DrawSphere(Vector3{ 0.0f, 0.0f, 0.0f }, 0.6f, DARKBLUE);
+    DrawSphereWires(Vector3{ 0.0f, 0.0f, 0.0f }, 0.62f, 8, 8, SKYBLUE);
 
     // Front Camera / Scanner Eye
-    DrawSphere((Vector3){ 0.0f, 0.0f, 0.55f }, 0.25f, (mode == DRONE_MODE_FREE_FLIGHT) ? LIME : RED);
+    DrawSphere(Vector3{ 0.0f, 0.0f, 0.55f }, 0.25f, (mode == DRONE_MODE_FREE_FLIGHT) ? LIME : RED);
 
     // 4 Diagonal Rotor Arms
     float armLen = 1.2f;
@@ -193,7 +193,7 @@ void Drone::DrawProceduralDrone() const {
     };
 
     for (int i = 0; i < 4; i++) {
-        DrawCylinderEx((Vector3){ 0.0f, 0.0f, 0.0f }, armOffsets[i], 0.08f, 0.08f, 6, GRAY);
+        DrawCylinderEx(Vector3{ 0.0f, 0.0f, 0.0f }, armOffsets[i], 0.08f, 0.08f, 6, GRAY);
         
         // Motor Caps
         DrawCylinder(armOffsets[i], 0.18f, 0.18f, 0.25f, 8, DARKGRAY);
@@ -202,13 +202,13 @@ void Drone::DrawProceduralDrone() const {
         rlPushMatrix();
         rlTranslatef(armOffsets[i].x, armOffsets[i].y + 0.15f, armOffsets[i].z);
         rlRotatef(rotorAngle * ((i % 2 == 0) ? 1.0f : -1.0f), 0.0f, 1.0f, 0.0f);
-        DrawCube((Vector3){ 0.0f, 0.0f, 0.0f }, 0.9f, 0.02f, 0.12f, (mode == DRONE_MODE_FREE_FLIGHT) ? GREEN : GOLD);
+        DrawCube(Vector3{ 0.0f, 0.0f, 0.0f }, 0.9f, 0.02f, 0.12f, (mode == DRONE_MODE_FREE_FLIGHT) ? GREEN : GOLD);
         rlPopMatrix();
     }
 
     // Scanning Cone / Downward Light Beam
     if (mode == DRONE_MODE_FOLLOW_ATTACK) {
-        DrawCylinder((Vector3){ 0.0f, -2.0f, 0.0f }, 0.1f, 1.2f, 2.0f, 12, Fade(SKYBLUE, 0.15f));
+        DrawCylinder(Vector3{ 0.0f, -2.0f, 0.0f }, 0.1f, 1.2f, 2.0f, 12, Fade(SKYBLUE, 0.15f));
     }
 
     rlPopMatrix();

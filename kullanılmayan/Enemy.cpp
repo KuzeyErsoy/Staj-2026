@@ -67,8 +67,8 @@ void Enemy::Draw() const {
     if (hp <= 0) return;
 
     Color bodyColor = (state == ENEMY_CHASE) ? RED : MAROON;
-    DrawCubeV(position, (Vector3){ 1.4f, 1.8f, 1.4f }, bodyColor);
-    DrawCubeWiresV(position, (Vector3){ 1.4f, 1.8f, 1.4f }, BLACK);
+    DrawCubeV(position, Vector3{ 1.4f, 1.8f, 1.4f }, bodyColor);
+    DrawCubeWiresV(position, Vector3{ 1.4f, 1.8f, 1.4f }, BLACK);
 
     // Glowing eye indicator
     Vector3 eyePos = {
@@ -83,17 +83,17 @@ void Enemy::Draw() const {
         Vector3 hpBarPos = { position.x, position.y + 1.4f, position.z };
         float barWidth = 1.6f;
         float hpRatio = (float)hp / (float)maxHp;
-        DrawCubeV(hpBarPos, (Vector3){ barWidth, 0.15f, 0.15f }, DARKGRAY);
-        DrawCubeV((Vector3){ hpBarPos.x - (barWidth * (1.0f - hpRatio) * 0.5f), hpBarPos.y, hpBarPos.z }, (Vector3){ barWidth * hpRatio, 0.18f, 0.18f }, GREEN);
+        DrawCubeV(hpBarPos, Vector3{ barWidth, 0.15f, 0.15f }, DARKGRAY);
+        DrawCubeV(Vector3{ hpBarPos.x - (barWidth * (1.0f - hpRatio) * 0.5f), hpBarPos.y, hpBarPos.z }, Vector3{ barWidth * hpRatio, 0.18f, 0.18f }, GREEN);
     }
 }
 
 BoundingBox Enemy::GetBounds() const {
     if (hp <= 0) {
-        return (BoundingBox){ (Vector3){0, -100, 0}, (Vector3){0, -100, 0} };
+        return BoundingBox{ Vector3{0, -100, 0}, Vector3{0, -100, 0} };
     }
-    return (BoundingBox){
-        (Vector3){ position.x - 0.7f, position.y - 0.9f, position.z - 0.7f },
-        (Vector3){ position.x + 0.7f, position.y + 0.9f, position.z + 0.7f }
+    return BoundingBox{
+        Vector3{ position.x - 0.7f, position.y - 0.9f, position.z - 0.7f },
+        Vector3{ position.x + 0.7f, position.y + 0.9f, position.z + 0.7f }
     };
 }

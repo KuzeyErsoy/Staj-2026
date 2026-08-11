@@ -4,13 +4,13 @@
 #include <stdlib.h>
 
 CameraController::CameraController() {
-    defaultPosition = (Vector3){ 20.0f, 20.0f, 20.0f };
-    defaultTarget = (Vector3){ 0.0f, 0.0f, 0.0f };
+    defaultPosition = Vector3{ 20.0f, 20.0f, 20.0f };
+    defaultTarget = Vector3{ 0.0f, 0.0f, 0.0f };
 
     camera = { 0 };
     camera.position = defaultPosition;
     camera.target = defaultTarget;
-    camera.up = (Vector3){ 0.0f, 1.0f, 0.0f };
+    camera.up = Vector3{ 0.0f, 1.0f, 0.0f };
     camera.fovy = 45.0f;
     camera.projection = CAMERA_PERSPECTIVE;
 
@@ -43,13 +43,13 @@ void CameraController::Update(Player& player, const Drone* drone) {
         float radYaw = drone->yaw * DEG2RAD;
         float radPitch = drone->pitch * DEG2RAD;
 
-        camera.position = (Vector3){
+        camera.position = Vector3{
             drone->position.x - sinf(radYaw) * cosf(radPitch) * 4.0f,
             drone->position.y + sinf(radPitch) * 4.0f + 0.5f,
             drone->position.z - cosf(radYaw) * cosf(radPitch) * 4.0f
         };
 
-        camera.target = (Vector3){
+        camera.target = Vector3{
             drone->position.x + sinf(radYaw) * cosf(radPitch) * 10.0f,
             drone->position.y - sinf(radPitch) * 10.0f,
             drone->position.z + cosf(radYaw) * cosf(radPitch) * 10.0f
@@ -98,7 +98,7 @@ void CameraController::Update(Player& player, const Drone* drone) {
         if (cameraPitch > 1.5f) cameraPitch = 1.5f;
         if (cameraPitch < -0.1f) cameraPitch = -0.1f;
 
-        camera.target = (Vector3){ player.position.x, player.position.y + 1.5f, player.position.z };
+        camera.target = Vector3{ player.position.x, player.position.y + 1.5f, player.position.z };
 
         camera.position.x = camera.target.x + cameraRadius * cosf(cameraPitch) * sinf(cameraYaw);
         camera.position.y = camera.target.y + cameraRadius * sinf(cameraPitch);
@@ -124,8 +124,8 @@ void CameraController::Update(Player& player, const Drone* drone) {
 void CameraController::Reset(Player& player) {
     camera.position = defaultPosition;
     camera.target = defaultTarget;
-    player.position = (Vector3){ 10.0f, 10.0f, 0.0f };
-    player.velocity = (Vector3){ 0.0f, 0.0f, 0.0f };
+    player.position = Vector3{ 10.0f, 10.0f, 0.0f };
+    player.velocity = Vector3{ 0.0f, 0.0f, 0.0f };
     isStrategicView = false;
     shakeTimer = 0.0f;
     camera.fovy = 45.0f;

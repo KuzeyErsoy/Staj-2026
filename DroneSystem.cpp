@@ -16,7 +16,7 @@ using namespace DroneFleet;
 
 DroneSystemManager::DroneSystemManager()
     : nextClusterId(1), scanTimer(0.0f), patrolAngle(0.0f),
-      activeCameraMode(0), freeCamPos((Vector3){ 0.0f, 45.0f, 75.0f }),
+      activeCameraMode(0), freeCamPos(Vector3{ 0.0f, 45.0f, 75.0f }),
       freeCamYaw(0.0f), freeCamPitch(-0.4f),
       trackCamYaw(0.0f), trackCamPitch(0.3f),
       fontLoaded(false), timeScale(1.0f), isPaused(false) {
@@ -49,7 +49,7 @@ DroneSystemManager::~DroneSystemManager() {
 
 void DroneSystemManager::DrawCustomText(const char* text, float posX, float posY, float fontSize, Color color) const {
     if (fontLoaded) {
-        DrawTextEx(customFont, text, (Vector2){ posX, posY }, fontSize, 1.0f, color);
+        DrawTextEx(customFont, text, Vector2{ posX, posY }, fontSize, 1.0f, color);
     } else {
         DrawText(text, (int)posX, (int)posY, (int)fontSize, color);
     }
@@ -109,8 +109,8 @@ void DroneSystemManager::UpdateFleetCamera(Camera3D& camera, float dt) {
         float flySpeed = 50.0f * dt;
         if (IsKeyDown(KEY_LEFT_SHIFT)) flySpeed *= 2.5f;
 
-        Vector3 forward = (Vector3){ sinf(freeCamYaw) * cosf(freeCamPitch), -sinf(freeCamPitch), cosf(freeCamYaw) * cosf(freeCamPitch) };
-        Vector3 right = (Vector3){ cosf(freeCamYaw), 0.0f, -sinf(freeCamYaw) };
+        Vector3 forward = Vector3{ sinf(freeCamYaw) * cosf(freeCamPitch), -sinf(freeCamPitch), cosf(freeCamYaw) * cosf(freeCamPitch) };
+        Vector3 right = Vector3{ cosf(freeCamYaw), 0.0f, -sinf(freeCamYaw) };
 
         if (IsKeyDown(KEY_W)) freeCamPos = Vector3Add(freeCamPos, Vector3Scale(forward, flySpeed));
         if (IsKeyDown(KEY_S)) freeCamPos = Vector3Subtract(freeCamPos, Vector3Scale(forward, flySpeed));
@@ -136,7 +136,7 @@ void DroneSystemManager::UpdateFleetCamera(Camera3D& camera, float dt) {
             if (trackCamPitch < -0.5f) trackCamPitch = -0.5f;
 
             float camDist = 16.0f;
-            Vector3 orbitOffset = (Vector3){
+            Vector3 orbitOffset = Vector3{
                 sinf(trackCamYaw) * cosf(trackCamPitch) * camDist,
                 sinf(trackCamPitch) * camDist + 3.0f,
                 cosf(trackCamYaw) * cosf(trackCamPitch) * camDist
@@ -144,7 +144,7 @@ void DroneSystemManager::UpdateFleetCamera(Camera3D& camera, float dt) {
 
             Vector3 desiredCamPos = Vector3Add(targetDrone.position, orbitOffset);
             camera.position = Vector3Lerp(camera.position, desiredCamPos, dt * 7.0f);
-            camera.target = Vector3Lerp(camera.target, (Vector3){ targetDrone.position.x, targetDrone.position.y + 1.2f, targetDrone.position.z }, dt * 10.0f);
+            camera.target = Vector3Lerp(camera.target, Vector3{ targetDrone.position.x, targetDrone.position.y + 1.2f, targetDrone.position.z }, dt * 10.0f);
             camera.fovy = 55.0f;
         }
     }
@@ -164,7 +164,7 @@ void DroneSystemManager::LogTerminal(const std::string& msg) {
 }
 
 void DroneSystemManager::Init() {
-    base.position = (Vector3){ 0.0f, 0.0f, 0.0f };
+    base.position = Vector3{ 0.0f, 0.0f, 0.0f };
     base.radius = 25.0f;
     base.fuelSupply = 9999.0f;
     base.ammoSupply = 9999.0f;
@@ -173,14 +173,14 @@ void DroneSystemManager::Init() {
 
     // 1. RECON #1 & #2 — Speed: 4x (32m/s), Fuel: 2x (200.0f), Ammo: 0, 160 HP
     Drone r1; r1.id = 1; r1.role = DroneRole::RECON; r1.state = DroneState::IDLE_AT_BASE;
-    r1.baseDockPos = (Vector3){ -14.0f, 0.6f, -12.0f }; r1.position = r1.baseDockPos; r1.targetPosition = r1.position;
-    r1.velocity = (Vector3){ 0, 0, 0 }; r1.maxFuel = 200.0f; r1.fuel = 200.0f; r1.maxAmmo = 0.0f; r1.ammo = 0.0f;
+    r1.baseDockPos = Vector3{ -14.0f, 0.6f, -12.0f }; r1.position = r1.baseDockPos; r1.targetPosition = r1.position;
+    r1.velocity = Vector3{ 0, 0, 0 }; r1.maxFuel = 200.0f; r1.fuel = 200.0f; r1.maxAmmo = 0.0f; r1.ammo = 0.0f;
     r1.maxHp = 160.0f; r1.hp = 160.0f; r1.isDestroyed = false; r1.isBeingRecovered = false;
     r1.reconSectorIndex = 0; r1.LogAction("Docked at Hangar Bay #1 (4x Speed, 2x Fuel, 160 HP)"); drones.push_back(r1);
 
     Drone r2; r2.id = 2; r2.role = DroneRole::RECON; r2.state = DroneState::IDLE_AT_BASE;
-    r2.baseDockPos = (Vector3){ -14.0f, 0.6f, -6.0f }; r2.position = r2.baseDockPos; r2.targetPosition = r2.position;
-    r2.velocity = (Vector3){ 0, 0, 0 }; r2.maxFuel = 200.0f; r2.fuel = 200.0f; r2.maxAmmo = 0.0f; r2.ammo = 0.0f;
+    r2.baseDockPos = Vector3{ -14.0f, 0.6f, -6.0f }; r2.position = r2.baseDockPos; r2.targetPosition = r2.position;
+    r2.velocity = Vector3{ 0, 0, 0 }; r2.maxFuel = 200.0f; r2.fuel = 200.0f; r2.maxAmmo = 0.0f; r2.ammo = 0.0f;
     r2.maxHp = 160.0f; r2.hp = 160.0f; r2.isDestroyed = false; r2.isBeingRecovered = false;
     r2.reconSectorIndex = 8; r2.LogAction("Docked at Hangar Bay #2 (4x Speed, 2x Fuel, 160 HP)"); drones.push_back(r2);
 
@@ -188,8 +188,8 @@ void DroneSystemManager::Init() {
     for (int i = 0; i < 5; i++) {
         Drone tf; tf.id = 3 + i; tf.role = DroneRole::TASK_FORCE; tf.state = DroneState::IDLE_AT_BASE;
         float zPos = -12.0f + (float)i * 6.0f;
-        tf.baseDockPos = (Vector3){ 0.0f, 0.6f, zPos }; tf.position = tf.baseDockPos; tf.targetPosition = tf.position;
-        tf.velocity = (Vector3){ 0, 0, 0 }; tf.maxFuel = 100.0f; tf.fuel = 100.0f; tf.maxAmmo = 60.0f; tf.ammo = 60.0f;
+        tf.baseDockPos = Vector3{ 0.0f, 0.6f, zPos }; tf.position = tf.baseDockPos; tf.targetPosition = tf.position;
+        tf.velocity = Vector3{ 0, 0, 0 }; tf.maxFuel = 100.0f; tf.fuel = 100.0f; tf.maxAmmo = 60.0f; tf.ammo = 60.0f;
         tf.maxHp = 200.0f; tf.hp = 200.0f; tf.isDestroyed = false; tf.isBeingRecovered = false;
         tf.LogAction("Docked at Hangar Bay #" + std::to_string(tf.id) + " (2x Speed, 1x Fuel, 200 HP)"); drones.push_back(tf);
     }
@@ -197,8 +197,8 @@ void DroneSystemManager::Init() {
     // 3. SUPPORT #1 & #2 — Speed: 2x (16m/s SPEED BUFF!), Fuel: 4x (400.0f), Cargo: 600 Fuel / 240 Ammo, 300 HP
     for (int i = 0; i < 2; i++) {
         Drone s; s.id = 8 + i; s.role = DroneRole::SUPPORT; s.state = DroneState::IDLE_AT_BASE;
-        s.baseDockPos = (Vector3){ 14.0f, 0.6f, -6.0f + (float)i * 12.0f }; s.position = s.baseDockPos; s.targetPosition = s.position;
-        s.velocity = (Vector3){ 0, 0, 0 }; s.maxFuel = 400.0f; s.fuel = 400.0f; s.maxAmmo = 0.0f; s.ammo = 0.0f;
+        s.baseDockPos = Vector3{ 14.0f, 0.6f, -6.0f + (float)i * 12.0f }; s.position = s.baseDockPos; s.targetPosition = s.position;
+        s.velocity = Vector3{ 0, 0, 0 }; s.maxFuel = 400.0f; s.fuel = 400.0f; s.maxAmmo = 0.0f; s.ammo = 0.0f;
         s.maxHp = 300.0f; s.hp = 300.0f; s.isDestroyed = false; s.isBeingRecovered = false;
         s.cargoFuel = 600.0f; s.cargoAmmo = 240.0f;
         s.LogAction("Docked at Hangar Bay #" + std::to_string(s.id) + " (2x Speed Buff, 4x Fuel, 300 HP)"); drones.push_back(s);
@@ -228,7 +228,7 @@ void DroneSystemManager::SpawnCustomCluster(bool forceArmed, int forceMag) {
         rx = 180.0f;
         rz = 180.0f;
     }
-    cluster.centerPosition = (Vector3){ rx, 1.0f, rz };
+    cluster.centerPosition = Vector3{ rx, 1.0f, rz };
 
     int totalUnits = (forceMag > 0) ? forceMag : GetRandomValue(6, 12);
     cluster.initialMagnitude = totalUnits;
@@ -243,8 +243,8 @@ void DroneSystemManager::SpawnCustomCluster(bool forceArmed, int forceMag) {
         e.id = i + 1;
         float offsetX = (float)GetRandomValue(-14, 14);
         float offsetZ = (float)GetRandomValue(-14, 14);
-        e.position = (Vector3){ rx + offsetX, 1.0f, rz + offsetZ };
-        e.velocity = (Vector3){ 0.0f, 0.0f, 0.0f };
+        e.position = Vector3{ rx + offsetX, 1.0f, rz + offsetZ };
+        e.velocity = Vector3{ 0.0f, 0.0f, 0.0f };
         e.hp = 100.0f;
         e.maxHp = 100.0f;
         e.isAlive = true;
@@ -324,7 +324,7 @@ void DroneSystemManager::UpdateRecon(Drone& drone, float dt) {
                 drone.assignedSupportId = availSupport->id;
                 availSupport->servicingReconId = drone.id;
 
-                Vector3 rendezvousPoint = (Vector3){
+                Vector3 rendezvousPoint = Vector3{
                     (drone.position.x + base.position.x) * 0.5f,
                     20.0f,
                     (drone.position.z + base.position.z) * 0.5f
@@ -373,7 +373,7 @@ void DroneSystemManager::UpdateRecon(Drone& drone, float dt) {
     }
 
     if (detectedCluster != nullptr) {
-        drone.targetPosition = (Vector3){ detectedCluster->centerPosition.x, 18.0f, detectedCluster->centerPosition.z };
+        drone.targetPosition = Vector3{ detectedCluster->centerPosition.x, 18.0f, detectedCluster->centerPosition.z };
         float dist = Vector3Distance(drone.position, detectedCluster->centerPosition);
 
         if (dist <= 70.0f) {
@@ -446,7 +446,7 @@ void DroneSystemManager::UpdateTaskForce(Drone& drone, float dt) {
         if (drone.state != DroneState::REQUESTING_SUPPORT && drone.state != DroneState::RESUPPLYING_IN_AIR) {
             drone.state = DroneState::REQUESTING_SUPPORT;
 
-            Vector3 midPoint = (Vector3){
+            Vector3 midPoint = Vector3{
                 (drone.position.x + base.position.x) * 0.5f,
                 18.0f,
                 (drone.position.z + base.position.z) * 0.5f
@@ -536,7 +536,7 @@ void DroneSystemManager::UpdateTaskForce(Drone& drone, float dt) {
         float standoffRadius = 32.0f + (float)((int)tfIdx % 3) * 6.0f;
         float standoffHeight = 12.0f + (float)((int)tfIdx % 3) * 4.0f;
 
-        drone.targetPosition = (Vector3){
+        drone.targetPosition = Vector3{
             targetCluster->centerPosition.x + sinf(offsetAngle) * standoffRadius,
             standoffHeight,
             targetCluster->centerPosition.z + cosf(offsetAngle) * standoffRadius
@@ -657,7 +657,7 @@ void DroneSystemManager::UpdateSupport(Drone& drone, float dt) {
         }
 
         if (hostilesNearCrash) {
-            drone.targetPosition = (Vector3){ downedDrone->position.x, 25.0f, downedDrone->position.z };
+            drone.targetPosition = Vector3{ downedDrone->position.x, 25.0f, downedDrone->position.z };
             drone.isResupplyBeamActive = false;
             drone.state = DroneState::MOVING_TO_TARGET;
         } else {
@@ -667,7 +667,7 @@ void DroneSystemManager::UpdateSupport(Drone& drone, float dt) {
                 LogTerminal("[SAR MISSION] Support #" + std::to_string(drone.id) + " dispatched to recover downed Drone #" + std::to_string(downedDrone->id));
             }
 
-            drone.targetPosition = (Vector3){ downedDrone->position.x, 4.0f, downedDrone->position.z };
+            drone.targetPosition = Vector3{ downedDrone->position.x, 4.0f, downedDrone->position.z };
             float dist = Vector3Distance(drone.position, downedDrone->position);
 
             if (dist < 35.0f) {
@@ -879,7 +879,7 @@ void DroneSystemManager::UpdateBaseRefill(Drone& drone, float dt) {
                 if (drone.state == DroneState::RETURNING_TO_BASE) {
                     drone.state = DroneState::IDLE_AT_BASE;
                     drone.position = drone.baseDockPos;
-                    drone.velocity = (Vector3){ 0, 0, 0 };
+                    drone.velocity = Vector3{ 0, 0, 0 };
                     drone.hasRendezvous = false;
                     drone.assignedSupportId = -1;
                     drone.servicingReconId = -1;
@@ -1010,7 +1010,7 @@ void DroneSystemManager::Update(float dt) {
                     if (closestTargetDrone->hp <= 0.0f) {
                         closestTargetDrone->hp = 0.0f;
                         closestTargetDrone->isDestroyed = true;
-                        closestTargetDrone->velocity = (Vector3){ 0, -15.0f, 0 };
+                        closestTargetDrone->velocity = Vector3{ 0, -15.0f, 0 };
                         closestTargetDrone->state = DroneState::IDLE_AT_BASE;
                         telemetry.destroyedDronesCount++;
 
@@ -1034,7 +1034,7 @@ void DroneSystemManager::Update(float dt) {
                 if (dist < 1.0f || (GetRandomValue(0, 100) < 4)) {
                     float rx = (float)GetRandomValue(-22, 22);
                     float rz = (float)GetRandomValue(-22, 22);
-                    e.fleeTarget = (Vector3){ c.centerPosition.x + rx, 1.0f, c.centerPosition.z + rz };
+                    e.fleeTarget = Vector3{ c.centerPosition.x + rx, 1.0f, c.centerPosition.z + rz };
                 } else {
                     Vector3 normDir = Vector3Scale(fleeDir, 1.0f / dist);
                     float speed = 7.5f;
@@ -1073,7 +1073,7 @@ void DroneSystemManager::Update(float dt) {
 
         if (d.state == DroneState::IDLE_AT_BASE) {
             d.position = Vector3Lerp(d.position, d.baseDockPos, effectiveDt * 5.0f);
-            d.velocity = (Vector3){ 0, 0, 0 };
+            d.velocity = Vector3{ 0, 0, 0 };
             d.pitch = 0.0f;
             d.roll = 0.0f;
             continue;
@@ -1095,7 +1095,7 @@ void DroneSystemManager::Update(float dt) {
             float speedVal = Vector3Length(d.velocity);
             d.pitch = std::clamp(speedVal * 1.1f, -20.0f, 20.0f);
         } else {
-            d.velocity = Vector3Lerp(d.velocity, (Vector3){ 0.0f, 0.0f, 0.0f }, effectiveDt * 3.5f);
+            d.velocity = Vector3Lerp(d.velocity, Vector3{ 0.0f, 0.0f, 0.0f }, effectiveDt * 3.5f);
             d.position = Vector3Add(d.position, Vector3Scale(d.velocity, effectiveDt));
             d.pitch = std::clamp(d.pitch * 0.9f, -2.0f, 2.0f);
         }
@@ -1109,26 +1109,26 @@ void DroneSystemManager::Update(float dt) {
 void DroneSystemManager::DrawBase3D() const {
     DrawGrid(100, 10.0f);
 
-    DrawCylinder(base.position, base.radius, base.radius, 0.2f, 32, (Color){ 0, 180, 255, 40 });
-    DrawCircle3D(base.position, base.radius, (Vector3){ 1, 0, 0 }, 90.0f, (Color){ 0, 255, 255, 200 });
+    DrawCylinder(base.position, base.radius, base.radius, 0.2f, 32, Color{ 0, 180, 255, 40 });
+    DrawCircle3D(base.position, base.radius, Vector3{ 1, 0, 0 }, 90.0f, Color{ 0, 255, 255, 200 });
 
-    Vector3 hPos = (Vector3){ 0.0f, 5.0f, 0.0f };
+    Vector3 hPos = Vector3{ 0.0f, 5.0f, 0.0f };
     DrawCubeWires(hPos, 36.0f, 10.0f, 44.0f, SKYBLUE);
-    DrawCube((Vector3){ 0.0f, 10.1f, 0.0f }, 36.5f, 0.4f, 44.5f, (Color){ 20, 50, 80, 220 });
+    DrawCube(Vector3{ 0.0f, 10.1f, 0.0f }, 36.5f, 0.4f, 44.5f, Color{ 20, 50, 80, 220 });
 
     float pX[4] = { -18.0f, 18.0f, -18.0f, 18.0f };
     float pZ[4] = { -22.0f, -22.0f, 22.0f, 22.0f };
     for (int i = 0; i < 4; i++) {
-        DrawCylinder((Vector3){ pX[i], 2.5f, pZ[i] }, 0.8f, 0.8f, 5.0f, 8, DARKGRAY);
+        DrawCylinder(Vector3{ pX[i], 2.5f, pZ[i] }, 0.8f, 0.8f, 5.0f, 8, DARKGRAY);
     }
 
-    DrawCylinder((Vector3){ -20.0f, 3.0f, -10.0f }, 2.5f, 2.5f, 6.0f, 16, ORANGE);
-    DrawCylinder((Vector3){ -20.0f, 3.0f, 10.0f }, 2.5f, 2.5f, 6.0f, 16, YELLOW);
+    DrawCylinder(Vector3{ -20.0f, 3.0f, -10.0f }, 2.5f, 2.5f, 6.0f, 16, ORANGE);
+    DrawCylinder(Vector3{ -20.0f, 3.0f, 10.0f }, 2.5f, 2.5f, 6.0f, 16, YELLOW);
 
     for (const auto& d : drones) {
         Color padColor = (d.role == DroneRole::RECON) ? SKYBLUE : ((d.role == DroneRole::TASK_FORCE) ? ORANGE : LIME);
-        DrawCircle3D(d.baseDockPos, 2.2f, (Vector3){ 1, 0, 0 }, 90.0f, padColor);
-        DrawCircle3D(d.baseDockPos, 1.1f, (Vector3){ 1, 0, 0 }, 90.0f, RAYWHITE);
+        DrawCircle3D(d.baseDockPos, 2.2f, Vector3{ 1, 0, 0 }, 90.0f, padColor);
+        DrawCircle3D(d.baseDockPos, 1.1f, Vector3{ 1, 0, 0 }, 90.0f, RAYWHITE);
     }
 }
 
@@ -1137,17 +1137,17 @@ void DroneSystemManager::DrawClusters3D() const {
         if (c.status == ClusterStatus::CLEARED) continue;
 
         Color ringColor = RED;
-        if (c.status == ClusterStatus::UNDETECTED) ringColor = (Color){ 220, 220, 50, 180 };
+        if (c.status == ClusterStatus::UNDETECTED) ringColor = Color{ 220, 220, 50, 180 };
         else if (c.status == ClusterStatus::REPORTED) ringColor = ORANGE;
 
-        DrawCircle3D(c.centerPosition, 18.0f, (Vector3){ 1, 0, 0 }, 90.0f, ringColor);
+        DrawCircle3D(c.centerPosition, 18.0f, Vector3{ 1, 0, 0 }, 90.0f, ringColor);
 
         // 3D FLOATING OVERHEAD BILLBOARD FOR DISCOVERED HOSTILE CLUSTERS
         if (c.status == ClusterStatus::REPORTED || c.status == ClusterStatus::ENGAGED) {
-            Vector3 bannerPos = (Vector3){ c.centerPosition.x, 14.0f, c.centerPosition.z };
-            Color bannerCol = (c.armedCount > 0) ? (Color){ 255, 30, 30, 255 } : (Color){ 240, 160, 20, 255 };
+            Vector3 bannerPos = Vector3{ c.centerPosition.x, 14.0f, c.centerPosition.z };
+            Color bannerCol = (c.armedCount > 0) ? Color{ 255, 30, 30, 255 } : Color{ 240, 160, 20, 255 };
 
-            DrawCube(bannerPos, 24.0f, 4.0f, 0.4f, (Color){ 10, 15, 25, 230 });
+            DrawCube(bannerPos, 24.0f, 4.0f, 0.4f, Color{ 10, 15, 25, 230 });
             DrawCubeWires(bannerPos, 24.2f, 4.2f, 0.5f, bannerCol);
 
             DrawLine3D(c.centerPosition, bannerPos, bannerCol);
@@ -1156,10 +1156,10 @@ void DroneSystemManager::DrawClusters3D() const {
         for (const auto& e : c.enemies) {
             if (!e.isAlive) continue;
 
-            Color enemyColor = e.isArmed ? (Color){ 255, 30, 30, 255 } : (Color){ 240, 150, 20, 255 };
+            Color enemyColor = e.isArmed ? Color{ 255, 30, 30, 255 } : Color{ 240, 150, 20, 255 };
             Color wireColor = e.isArmed ? MAROON : GOLD;
 
-            if (e.panicTimer > 0.0f) enemyColor = (Color){ 255, 200, 0, 255 };
+            if (e.panicTimer > 0.0f) enemyColor = Color{ 255, 200, 0, 255 };
 
             DrawCube(e.position, 2.0f, 2.0f, 2.0f, enemyColor);
             DrawCubeWires(e.position, 2.1f, 2.1f, 2.1f, wireColor);
@@ -1170,25 +1170,25 @@ void DroneSystemManager::DrawClusters3D() const {
             }
 
             if (e.panicTimer > 0.0f) {
-                DrawCircle3D(e.position, 2.8f, (Vector3){ 1, 0, 0 }, 90.0f, YELLOW);
+                DrawCircle3D(e.position, 2.8f, Vector3{ 1, 0, 0 }, 90.0f, YELLOW);
             }
 
             float hpPct = std::max(0.0f, e.hp / e.maxHp);
-            DrawCube((Vector3){ e.position.x, e.position.y + 2.2f, e.position.z }, 2.0f, 0.3f, 0.3f, DARKGRAY);
-            DrawCube((Vector3){ e.position.x - (1.0f - hpPct), e.position.y + 2.2f, e.position.z }, 2.0f * hpPct, 0.3f, 0.3f, e.isArmed ? RED : ORANGE);
+            DrawCube(Vector3{ e.position.x, e.position.y + 2.2f, e.position.z }, 2.0f, 0.3f, 0.3f, DARKGRAY);
+            DrawCube(Vector3{ e.position.x - (1.0f - hpPct), e.position.y + 2.2f, e.position.z }, 2.0f * hpPct, 0.3f, 0.3f, e.isArmed ? RED : ORANGE);
         }
     }
 
     for (const auto& d : drones) {
         if (d.isDestroyed) continue;
         if (d.role == DroneRole::RECON && d.state != DroneState::IDLE_AT_BASE) {
-            DrawCircle3D(d.position, 140.0f, (Vector3){ 1, 0, 0 }, 90.0f, Fade(SKYBLUE, 0.35f));
-            DrawCircle3D(d.position, 140.5f, (Vector3){ 1, 0, 0 }, 90.0f, SKYBLUE);
-            DrawCircle3D(d.position, 70.0f, (Vector3){ 1, 0, 0 }, 90.0f, Fade(GOLD, 0.40f));
+            DrawCircle3D(d.position, 140.0f, Vector3{ 1, 0, 0 }, 90.0f, Fade(SKYBLUE, 0.35f));
+            DrawCircle3D(d.position, 140.5f, Vector3{ 1, 0, 0 }, 90.0f, SKYBLUE);
+            DrawCircle3D(d.position, 70.0f, Vector3{ 1, 0, 0 }, 90.0f, Fade(GOLD, 0.40f));
         }
         if (d.hasRendezvous) {
-            DrawCircle3D(d.rendezvousPos, 12.0f, (Vector3){ 1, 0, 0 }, 90.0f, GOLD);
-            DrawCircle3D(d.rendezvousPos, 6.0f, (Vector3){ 1, 0, 0 }, 90.0f, YELLOW);
+            DrawCircle3D(d.rendezvousPos, 12.0f, Vector3{ 1, 0, 0 }, 90.0f, GOLD);
+            DrawCircle3D(d.rendezvousPos, 6.0f, Vector3{ 1, 0, 0 }, 90.0f, YELLOW);
         }
     }
 }
@@ -1197,7 +1197,7 @@ void DroneSystemManager::DrawDrone3D(const Drone& drone) const {
     if (drone.isDestroyed) {
         DrawCube(drone.position, 1.8f, 0.4f, 1.8f, DARKGRAY);
         DrawCubeWires(drone.position, 1.85f, 0.45f, 1.85f, BLACK);
-        DrawCircle3D(drone.position, 1.8f, (Vector3){ 1, 0, 0 }, 90.0f, Fade(RED, 0.6f));
+        DrawCircle3D(drone.position, 1.8f, Vector3{ 1, 0, 0 }, 90.0f, Fade(RED, 0.6f));
         return;
     }
 
@@ -1213,15 +1213,15 @@ void DroneSystemManager::DrawDrone3D(const Drone& drone) const {
     rlRotatef(drone.yaw, 0.0f, 1.0f, 0.0f);
     rlRotatef(drone.pitch, 1.0f, 0.0f, 0.0f);
 
-    DrawCube((Vector3){ 0, 0, 0 }, 1.8f, 0.6f, 1.8f, bodyColor);
-    DrawCubeWires((Vector3){ 0, 0, 0 }, 1.85f, 0.65f, 1.85f, DARKGRAY);
+    DrawCube(Vector3{ 0, 0, 0 }, 1.8f, 0.6f, 1.8f, bodyColor);
+    DrawCubeWires(Vector3{ 0, 0, 0 }, 1.85f, 0.65f, 1.85f, DARKGRAY);
 
     float rOffset = 1.3f;
     Vector3 rPositions[4] = {
-        (Vector3){ rOffset, 0.3f, rOffset },
-        (Vector3){ -rOffset, 0.3f, rOffset },
-        (Vector3){ rOffset, 0.3f, -rOffset },
-        (Vector3){ -rOffset, 0.3f, -rOffset }
+        Vector3{ rOffset, 0.3f, rOffset },
+        Vector3{ -rOffset, 0.3f, rOffset },
+        Vector3{ rOffset, 0.3f, -rOffset },
+        Vector3{ -rOffset, 0.3f, -rOffset }
     };
 
     for (int i = 0; i < 4; i++) {
@@ -1250,7 +1250,7 @@ void DroneSystemManager::Draw3D() const {
 }
 
 void DroneSystemManager::DrawTacticalMap2D(int mapX, int mapY, int mapW, int mapH, bool fullscreen) const {
-    DrawRectangle(mapX, mapY, mapW, mapH, (Color){ 3, 8, 16, 245 });
+    DrawRectangle(mapX, mapY, mapW, mapH, Color{ 3, 8, 16, 245 });
     DrawRectangleLines(mapX, mapY, mapW, mapH, SKYBLUE);
     DrawRectangleLines(mapX + 2, mapY + 2, mapW - 4, mapH - 4, Fade(SKYBLUE, 0.35f));
 
@@ -1317,7 +1317,7 @@ void DroneSystemManager::DrawDroneInspector2D() const {
     int panelX = (screenWidth - panelW) / 2;
     int panelY = (screenHeight - panelH) / 2;
 
-    DrawRectangle(panelX, panelY, panelW, panelH, (Color){ 4, 12, 24, 252 });
+    DrawRectangle(panelX, panelY, panelW, panelH, Color{ 4, 12, 24, 252 });
     DrawRectangleLines(panelX, panelY, panelW, panelH, GOLD);
     DrawRectangleLines(panelX + 2, panelY + 2, panelW - 4, panelH - 4, Fade(GOLD, 0.4f));
 
@@ -1398,7 +1398,7 @@ void DroneSystemManager::DrawActiveMissionsPanel2D() const {
     int panelX = 20;
     int panelY = 215;
 
-    DrawRectangle(panelX, panelY, panelW, panelH, (Color){ 4, 10, 20, 245 });
+    DrawRectangle(panelX, panelY, panelW, panelH, Color{ 4, 10, 20, 245 });
     DrawRectangleLines(panelX, panelY, panelW, panelH, GOLD);
     DrawRectangleLines(panelX + 2, panelY + 2, panelW - 4, panelH - 4, Fade(GOLD, 0.35f));
 
@@ -1432,7 +1432,7 @@ void DroneSystemManager::DrawActiveMissionsPanel2D() const {
                 }
             }
 
-            Color typeCol = (c.armedCount > 0) ? (Color){ 255, 60, 60, 255 } : ORANGE;
+            Color typeCol = (c.armedCount > 0) ? Color{ 255, 60, 60, 255 } : ORANGE;
             const char* typeStr = (c.armedCount > 0) ? "ARMED" : "UNARMED";
 
             DrawCustomText(TextFormat("MISSION #%d - CLUSTER #%d (%s)", activeMissions, c.id, typeStr), panelX + 12, startY, 12.0f, typeCol);
@@ -1474,7 +1474,7 @@ void DroneSystemManager::Draw2DHUD() const {
         int leftX = 20;
         int leftY = 15;
 
-        DrawRectangle(leftX, leftY, leftW, leftH, (Color){ 4, 10, 20, 240 });
+        DrawRectangle(leftX, leftY, leftW, leftH, Color{ 4, 10, 20, 240 });
         DrawRectangleLines(leftX, leftY, leftW, leftH, SKYBLUE);
         DrawRectangleLines(leftX + 2, leftY + 2, leftW - 4, leftH - 4, Fade(SKYBLUE, 0.35f));
 
@@ -1503,7 +1503,7 @@ void DroneSystemManager::Draw2DHUD() const {
         int rightX = screenWidth - rightW - 20;
         int rightY = 15;
 
-        DrawRectangle(rightX, rightY, rightW, rightH, (Color){ 4, 10, 20, 245 });
+        DrawRectangle(rightX, rightY, rightW, rightH, Color{ 4, 10, 20, 245 });
         DrawRectangleLines(rightX, rightY, rightW, rightH, ORANGE);
         DrawRectangleLines(rightX + 2, rightY + 2, rightW - 4, rightH - 4, Fade(ORANGE, 0.35f));
 
@@ -1564,7 +1564,7 @@ void DroneSystemManager::Draw2DHUD() const {
         int bannerX = (screenWidth - bannerW) / 2;
         int bannerY = 15;
 
-        DrawRectangle(bannerX, bannerY, bannerW, bannerH, (Color){ 4, 10, 20, 245 });
+        DrawRectangle(bannerX, bannerY, bannerW, bannerH, Color{ 4, 10, 20, 245 });
         DrawRectangleLines(bannerX, bannerY, bannerW, bannerH, GOLD);
         DrawRectangleLines(bannerX + 2, bannerY + 2, bannerW - 4, bannerH - 4, Fade(GOLD, 0.35f));
 
@@ -1599,7 +1599,7 @@ void DroneSystemManager::Draw2DHUD() const {
         int termX = 20;
         int termY = screenHeight - termH - 20;
 
-        DrawRectangle(termX, termY, termW, termH, (Color){ 3, 7, 14, 250 });
+        DrawRectangle(termX, termY, termW, termH, Color{ 3, 7, 14, 250 });
         DrawRectangleLines(termX, termY, termW, termH, LIME);
         DrawRectangleLines(termX + 2, termY + 2, termW - 4, termH - 4, Fade(LIME, 0.35f));
 
@@ -1612,7 +1612,7 @@ void DroneSystemManager::Draw2DHUD() const {
         int startIndex = (int)telemetry.terminalLogs.size() - showCount;
 
         for (int i = startIndex; i < (int)telemetry.terminalLogs.size(); i++) {
-            DrawCustomText(telemetry.terminalLogs[i].c_str(), termX + 12, logY, 11.0f, (Color){ 0, 255, 120, 255 });
+            DrawCustomText(telemetry.terminalLogs[i].c_str(), termX + 12, logY, 11.0f, Color{ 0, 255, 120, 255 });
             logY += 17;
         }
     }
@@ -1620,10 +1620,10 @@ void DroneSystemManager::Draw2DHUD() const {
     // 6. FLOATING 2D OVERHEAD OVERLAY FOR DISCOVERED HOSTILE CLUSTERS
     Camera3D currentCam;
     if (activeCameraMode == 0) {
-        Vector3 forward = (Vector3){ sinf(freeCamYaw) * cosf(freeCamPitch), -sinf(freeCamPitch), cosf(freeCamYaw) * cosf(freeCamPitch) };
+        Vector3 forward = Vector3{ sinf(freeCamYaw) * cosf(freeCamPitch), -sinf(freeCamPitch), cosf(freeCamYaw) * cosf(freeCamPitch) };
         currentCam.position = freeCamPos;
         currentCam.target = Vector3Add(freeCamPos, forward);
-        currentCam.up = (Vector3){ 0, 1, 0 };
+        currentCam.up = Vector3{ 0, 1, 0 };
         currentCam.fovy = 60.0f;
         currentCam.projection = CAMERA_PERSPECTIVE;
     } else {
@@ -1631,14 +1631,14 @@ void DroneSystemManager::Draw2DHUD() const {
         if (droneIdx >= 0 && droneIdx < (int)drones.size()) {
             const auto& targetDrone = drones[droneIdx];
             float camDist = 16.0f;
-            Vector3 orbitOffset = (Vector3){
+            Vector3 orbitOffset = Vector3{
                 sinf(trackCamYaw) * cosf(trackCamPitch) * camDist,
                 sinf(trackCamPitch) * camDist + 3.0f,
                 cosf(trackCamYaw) * cosf(trackCamPitch) * camDist
             };
             currentCam.position = Vector3Add(targetDrone.position, orbitOffset);
-            currentCam.target = (Vector3){ targetDrone.position.x, targetDrone.position.y + 1.2f, targetDrone.position.z };
-            currentCam.up = (Vector3){ 0, 1, 0 };
+            currentCam.target = Vector3{ targetDrone.position.x, targetDrone.position.y + 1.2f, targetDrone.position.z };
+            currentCam.up = Vector3{ 0, 1, 0 };
             currentCam.fovy = 55.0f;
             currentCam.projection = CAMERA_PERSPECTIVE;
         }
@@ -1647,18 +1647,18 @@ void DroneSystemManager::Draw2DHUD() const {
     for (const auto& c : clusters) {
         if (c.status == ClusterStatus::CLEARED) continue;
         if (c.status == ClusterStatus::REPORTED || c.status == ClusterStatus::ENGAGED) {
-            Vector3 bannerPos3D = (Vector3){ c.centerPosition.x, 14.0f, c.centerPosition.z };
+            Vector3 bannerPos3D = Vector3{ c.centerPosition.x, 14.0f, c.centerPosition.z };
             Vector2 screenPos = GetWorldToScreen(bannerPos3D, currentCam);
 
             if (screenPos.x > 0 && screenPos.x < screenWidth && screenPos.y > 0 && screenPos.y < screenHeight) {
-                Color borderCol = (c.armedCount > 0) ? (Color){ 255, 40, 40, 255 } : (Color){ 240, 160, 20, 255 };
+                Color borderCol = (c.armedCount > 0) ? Color{ 255, 40, 40, 255 } : Color{ 240, 160, 20, 255 };
 
                 int boxW = 220;
                 int boxH = 42;
                 int boxX = (int)screenPos.x - boxW / 2;
                 int boxY = (int)screenPos.y - boxH / 2;
 
-                DrawRectangle(boxX, boxY, boxW, boxH, (Color){ 4, 10, 20, 235 });
+                DrawRectangle(boxX, boxY, boxW, boxH, Color{ 4, 10, 20, 235 });
                 DrawRectangleLines(boxX, boxY, boxW, boxH, borderCol);
 
                 const char* typeStr = (c.armedCount > 0) ? "ARMED (Silahlı)" : "UNARMED (Silahsız)";

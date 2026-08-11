@@ -30,14 +30,14 @@ Vector3 GetRandomCollectiblePos() {
   float z = (float)GetRandomValue(-25, 28);
   float heights[] = {0.75f, 2.75f, 4.75f, 6.75f, 8.75f, 10.75f};
   float y = heights[GetRandomValue(0, 5)];
-  return (Vector3){x, y, z};
+  return Vector3{x, y, z};
 }
 
 void InitLevelContent(int levelIdx, Map &gameMap, std::vector<Enemy> &enemies,
                       Player &player, std::vector<Collectible> &boxes) {
   // Reset player position & status
-  player.position = (Vector3){10.0f, 10.0f, 0.0f};
-  player.velocity = (Vector3){0.0f, 0.0f, 0.0f};
+  player.position = Vector3{10.0f, 10.0f, 0.0f};
+  player.velocity = Vector3{0.0f, 0.0f, 0.0f};
   player.hp = player.maxHp;
 
   // Load Level Map
@@ -56,31 +56,31 @@ void InitLevelContent(int levelIdx, Map &gameMap, std::vector<Enemy> &enemies,
   // Setup Enemies
   enemies.clear();
   if (levelIdx == 99) { // Test Arena
-    enemies.push_back(Enemy((Vector3){-12.0f, 1.0f, -12.0f},
-                            (Vector3){12.0f, 1.0f, -12.0f}, 4.0f));
-    enemies.push_back(Enemy((Vector3){15.0f, 1.0f, 5.0f},
-                            (Vector3){15.0f, 1.0f, -15.0f}, 4.5f));
-    enemies.push_back(Enemy((Vector3){-10.0f, 1.0f, 10.0f},
-                            (Vector3){10.0f, 1.0f, 10.0f}, 4.0f));
+    enemies.push_back(Enemy(Vector3{-12.0f, 1.0f, -12.0f},
+                            Vector3{12.0f, 1.0f, -12.0f}, 4.0f));
+    enemies.push_back(Enemy(Vector3{15.0f, 1.0f, 5.0f},
+                            Vector3{15.0f, 1.0f, -15.0f}, 4.5f));
+    enemies.push_back(Enemy(Vector3{-10.0f, 1.0f, 10.0f},
+                            Vector3{10.0f, 1.0f, 10.0f}, 4.0f));
   } else if (levelIdx == 1) {
-    enemies.push_back(Enemy((Vector3){-10.0f, 1.0f, -10.0f},
-                            (Vector3){10.0f, 1.0f, -10.0f}, 3.5f));
-    enemies.push_back(Enemy((Vector3){15.0f, 1.0f, 5.0f},
-                            (Vector3){15.0f, 1.0f, -15.0f}, 4.0f));
+    enemies.push_back(Enemy(Vector3{-10.0f, 1.0f, -10.0f},
+                            Vector3{10.0f, 1.0f, -10.0f}, 3.5f));
+    enemies.push_back(Enemy(Vector3{15.0f, 1.0f, 5.0f},
+                            Vector3{15.0f, 1.0f, -15.0f}, 4.0f));
   } else if (levelIdx == 2) {
-    enemies.push_back(Enemy((Vector3){-15.0f, 1.0f, -15.0f},
-                            (Vector3){15.0f, 1.0f, -15.0f}, 4.0f));
-    enemies.push_back(Enemy((Vector3){-10.0f, 1.0f, 10.0f},
-                            (Vector3){10.0f, 1.0f, 10.0f}, 4.5f));
-    enemies.push_back(Enemy((Vector3){0.0f, 3.0f, -5.0f},
-                            (Vector3){0.0f, 3.0f, 15.0f}, 3.5f));
+    enemies.push_back(Enemy(Vector3{-15.0f, 1.0f, -15.0f},
+                            Vector3{15.0f, 1.0f, -15.0f}, 4.0f));
+    enemies.push_back(Enemy(Vector3{-10.0f, 1.0f, 10.0f},
+                            Vector3{10.0f, 1.0f, 10.0f}, 4.5f));
+    enemies.push_back(Enemy(Vector3{0.0f, 3.0f, -5.0f},
+                            Vector3{0.0f, 3.0f, 15.0f}, 3.5f));
   } else { // Level 3
-    enemies.push_back(Enemy((Vector3){-18.0f, 1.0f, -18.0f},
-                            (Vector3){18.0f, 1.0f, -18.0f}, 5.0f));
-    enemies.push_back(Enemy((Vector3){-18.0f, 1.0f, 18.0f},
-                            (Vector3){18.0f, 1.0f, 18.0f}, 5.0f));
-    enemies.push_back(Enemy((Vector3){-10.0f, 5.0f, 0.0f},
-                            (Vector3){10.0f, 5.0f, 0.0f}, 4.5f));
+    enemies.push_back(Enemy(Vector3{-18.0f, 1.0f, -18.0f},
+                            Vector3{18.0f, 1.0f, -18.0f}, 5.0f));
+    enemies.push_back(Enemy(Vector3{-18.0f, 1.0f, 18.0f},
+                            Vector3{18.0f, 1.0f, 18.0f}, 5.0f));
+    enemies.push_back(Enemy(Vector3{-10.0f, 5.0f, 0.0f},
+                            Vector3{10.0f, 5.0f, 0.0f}, 4.5f));
   }
 
   // Reset Collectible Boxes
@@ -98,12 +98,12 @@ int main() {
   // Initialize Procedural Sound Synth Engine
   AudioManager::Instance().Init();
 
-  Player player((Vector3){10.0f, 10.0f, 0.0f});
+  Player player(Vector3{10.0f, 10.0f, 0.0f});
   Map gameMap;
   CameraController cameraController;
   Radar radar(680, 100, 75.0f, 40.0f);
   ParticleSystem particleSystem;
-  Drone drone((Vector3){8.0f, 12.0f, -2.0f});
+  Drone drone(Vector3{8.0f, 12.0f, -2.0f});
   DroneSystemManager fleetManager;
   fleetManager.Init();
 
@@ -122,7 +122,7 @@ int main() {
   std::string saveMessage = "";
 
   // Exit Portal Goal
-  Vector3 portalPos = (Vector3){0.0f, 1.0f, 25.0f};
+  Vector3 portalPos = Vector3{0.0f, 1.0f, 25.0f};
 
   while (!WindowShouldClose()) {
     float dt = GetFrameTime();
@@ -197,9 +197,9 @@ int main() {
           if (activeEnemies < 10) {
             float sx = (float)GetRandomValue(-22, 22);
             float sz = (float)GetRandomValue(-22, 22);
-            enemies.push_back(Enemy((Vector3){sx, 1.0f, sz},
-                                    (Vector3){-sx, 1.0f, -sz}, 4.0f));
-            particleSystem.EmitImpact((Vector3){sx, 1.0f, sz}, PURPLE);
+            enemies.push_back(Enemy(Vector3{sx, 1.0f, sz},
+                                    Vector3{-sx, 1.0f, -sz}, 4.0f));
+            particleSystem.EmitImpact(Vector3{sx, 1.0f, sz}, PURPLE);
           }
         }
       }
@@ -234,7 +234,7 @@ int main() {
       // Dash Trail Particle Trigger
       if (player.isDashing) {
         float rad = player.rotationAngle * (PI / 180.0f);
-        Vector3 moveDir = (Vector3){sinf(rad), 0.0f, cosf(rad)};
+        Vector3 moveDir = Vector3{sinf(rad), 0.0f, cosf(rad)};
         particleSystem.EmitDashTrail(player.position, moveDir);
         cameraController.TriggerShake(0.12f, 0.05f);
       }
@@ -340,8 +340,8 @@ int main() {
       if (IsKeyPressed(KEY_R)) {
         AudioManager::Instance().PlayClick();
         player.hp = player.maxHp;
-        player.position = (Vector3){10.0f, 10.0f, 0.0f};
-        player.velocity = (Vector3){0.0f, 0.0f, 0.0f};
+        player.position = Vector3{10.0f, 10.0f, 0.0f};
+        player.velocity = Vector3{0.0f, 0.0f, 0.0f};
         currentState = STATE_PLAYING;
       }
       break;
@@ -386,7 +386,7 @@ int main() {
     if (currentState == STATE_FLEET_SIM) {
       fleetManager.Draw3D();
     } else {
-      DrawPlane((Vector3){0.0f, 0.0f, 0.0f}, (Vector2){100.0f, 100.0f},
+      DrawPlane(Vector3{0.0f, 0.0f, 0.0f}, Vector2{100.0f, 100.0f},
                 GREEN); // Ground plane
       gameMap.Draw();
       player.Draw();

@@ -1,7 +1,7 @@
 #include "Collectible.h"
 
 Collectible::Collectible() {
-    basePosition = (Vector3){ 0.0f, 0.75f, 0.0f };
+    basePosition = Vector3{ 0.0f, 0.75f, 0.0f };
     position = basePosition;
     active = true;
     rotationAngle = 0.0f;
@@ -36,8 +36,8 @@ void Collectible::Draw() {
     rlTranslatef(position.x, position.y, position.z);
     rlRotatef(rotationAngle, 0.0f, 1.0f, 0.0f);
     
-    DrawCube((Vector3){ 0.0f, 0.0f, 0.0f }, size, size, size, GOLD);
-    DrawCubeWires((Vector3){ 0.0f, 0.0f, 0.0f }, size, size, size, ORANGE);
+    DrawCube(Vector3{ 0.0f, 0.0f, 0.0f }, size, size, size, GOLD);
+    DrawCubeWires(Vector3{ 0.0f, 0.0f, 0.0f }, size, size, size, ORANGE);
     
     rlPopMatrix();
 }
@@ -51,8 +51,8 @@ void Collectible::Respawn(Vector3 newPos) {
 
 BoundingBox Collectible::GetBounds() const {
     float halfSize = size / 2.0f;
-    return (BoundingBox){
-        (Vector3){ position.x - halfSize, position.y - halfSize, position.z - halfSize },
-        (Vector3){ position.x + halfSize, position.y + halfSize, position.z + halfSize }
+    return BoundingBox{
+        Vector3{ position.x - halfSize, position.y - halfSize, position.z - halfSize },
+        Vector3{ position.x + halfSize, position.y + halfSize, position.z + halfSize }
     };
 }

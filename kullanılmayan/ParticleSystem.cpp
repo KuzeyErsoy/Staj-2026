@@ -16,7 +16,7 @@ void ParticleSystem::EmitPickupBurst(Vector3 pos) {
         float vx = ((float)GetRandomValue(-100, 100) / 100.0f) * 4.0f;
         float vy = ((float)GetRandomValue(50, 150) / 100.0f) * 4.0f;
         float vz = ((float)GetRandomValue(-100, 100) / 100.0f) * 4.0f;
-        p.velocity = (Vector3){ vx, vy, vz };
+        p.velocity = Vector3{ vx, vy, vz };
         
         // Shiny gold/cyan colors
         p.color = (GetRandomValue(0, 1) == 0) ? GOLD : SKYBLUE;
@@ -32,12 +32,12 @@ void ParticleSystem::EmitPickupBurst(Vector3 pos) {
 void ParticleSystem::EmitDashTrail(Vector3 pos, Vector3 dir) {
     for (int i = 0; i < 4; i++) {
         Particle p;
-        p.position = (Vector3){
+        p.position = Vector3{
             pos.x + ((float)GetRandomValue(-30, 30) / 100.0f),
             pos.y + 0.2f + ((float)GetRandomValue(-20, 20) / 100.0f),
             pos.z + ((float)GetRandomValue(-30, 30) / 100.0f)
         };
-        p.velocity = (Vector3){
+        p.velocity = Vector3{
             -dir.x * 1.5f + ((float)GetRandomValue(-50, 50) / 100.0f),
             ((float)GetRandomValue(10, 40) / 100.0f),
             -dir.z * 1.5f + ((float)GetRandomValue(-50, 50) / 100.0f)
@@ -59,7 +59,7 @@ void ParticleSystem::EmitLandingDust(Vector3 pos) {
         float vx = ((float)GetRandomValue(-100, 100) / 100.0f) * 3.0f;
         float vy = ((float)GetRandomValue(20, 80) / 100.0f) * 2.0f;
         float vz = ((float)GetRandomValue(-100, 100) / 100.0f) * 3.0f;
-        p.velocity = (Vector3){ vx, vy, vz };
+        p.velocity = Vector3{ vx, vy, vz };
         p.color = GRAY;
         p.size = (float)GetRandomValue(15, 30) / 100.0f;
         p.lifetime = 0.4f;
@@ -77,7 +77,7 @@ void ParticleSystem::EmitImpact(Vector3 pos, Color color) {
         float vx = ((float)GetRandomValue(-100, 100) / 100.0f) * 5.0f;
         float vy = ((float)GetRandomValue(50, 150) / 100.0f) * 3.0f;
         float vz = ((float)GetRandomValue(-100, 100) / 100.0f) * 5.0f;
-        p.velocity = (Vector3){ vx, vy, vz };
+        p.velocity = Vector3{ vx, vy, vz };
         p.color = color;
         p.size = (float)GetRandomValue(20, 35) / 100.0f;
         p.lifetime = 0.5f;
@@ -114,7 +114,7 @@ void ParticleSystem::Update(float dt) {
 void ParticleSystem::Draw() {
     for (const auto &p : particles) {
         if (p.isCube) {
-            DrawCubeV(p.position, (Vector3){ p.size, p.size, p.size }, p.color);
+            DrawCubeV(p.position, Vector3{ p.size, p.size, p.size }, p.color);
         } else {
             DrawSphere(p.position, p.size, p.color);
         }

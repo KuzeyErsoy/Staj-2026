@@ -53,7 +53,7 @@ bool SaveSystem::LoadGame(const std::string& filepath, int& currentLevel, Player
     if (player.hasDoubleJump) player.maxJumps = 2;
     player.moveSpeedMultiplier = data.moveSpeedMultiplier;
     player.dashCooldownMultiplier = data.dashCooldownMultiplier;
-    player.position = (Vector3){ data.posX, data.posY, data.posZ };
+    player.position = Vector3{ data.posX, data.posY, data.posZ };
 
     TraceLog(LOG_INFO, "SAVE: Successfully loaded game state from '%s'", filepath.c_str());
     return true;
