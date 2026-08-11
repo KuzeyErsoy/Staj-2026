@@ -4,6 +4,7 @@
 #include <sstream>
 #include <iostream>
 #include <cctype>
+#include <string>
 
 Map::Map() {
     if (FileExists("resources/map/block-grass-overhang-long.obj")) {

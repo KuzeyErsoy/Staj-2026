@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cstdio>
 #include <ctime>
+#include <string>
 
 #ifndef CYAN
 #define CYAN SKYBLUE

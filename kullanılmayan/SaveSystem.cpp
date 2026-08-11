@@ -1,6 +1,7 @@
 #include "SaveSystem.h"
 #include <fstream>
 #include "raylib.h"
+#include <string>
 
 bool SaveSystem::SaveGame(const std::string& filepath, int currentLevel, const Player& player) {
     SaveData data;
