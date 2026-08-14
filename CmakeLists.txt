@@ -12,22 +12,30 @@ add_executable(${PROJECT_NAME}
     main.cpp
     DroneSystem.cpp
 
-    # Legacy Game Code (Archived in kullanılmayan/)
-    kullanılmayan/Player.cpp
-    kullanılmayan/Map.cpp
-    kullanılmayan/CameraController.cpp
-    kullanılmayan/Collectible.cpp
-    kullanılmayan/Radar.cpp
-    kullanılmayan/ParticleSystem.cpp
-    kullanılmayan/AudioManager.cpp
-    kullanılmayan/Enemy.cpp
-    kullanılmayan/SaveSystem.cpp
-    kullanılmayan/Drone.cpp
+    # Modular Fleet Simulation Subsystems
+    fleet/Drone.cpp
+    fleet/ClusterManager.cpp
+    fleet/MissileSystem.cpp
+    fleet/HangarBase.cpp
+    fleet/FleetCamera.cpp
+    fleet/FleetHUD.cpp
+
+    # Legacy Game Code (Archived in oyun/)
+    oyun/Player.cpp
+    oyun/Map.cpp
+    oyun/CameraController.cpp
+    oyun/Collectible.cpp
+    oyun/Radar.cpp
+    oyun/ParticleSystem.cpp
+    oyun/AudioManager.cpp
+    oyun/Enemy.cpp
+    oyun/SaveSystem.cpp
+    oyun/Drone.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE 
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/kullanılmayan
+    ${CMAKE_CURRENT_SOURCE_DIR}/oyun
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE raylib)

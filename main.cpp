@@ -13,7 +13,6 @@
 #include "raymath.h"
 #include <string>
 #include <vector>
-
 #define MAX_BOXES 20
 
 enum GameState {
@@ -58,29 +57,29 @@ void InitLevelContent(int levelIdx, Map &gameMap, std::vector<Enemy> &enemies,
   if (levelIdx == 99) { // Test Arena
     enemies.push_back(Enemy(Vector3{-12.0f, 1.0f, -12.0f},
                             Vector3{12.0f, 1.0f, -12.0f}, 4.0f));
-    enemies.push_back(Enemy(Vector3{15.0f, 1.0f, 5.0f},
-                            Vector3{15.0f, 1.0f, -15.0f}, 4.5f));
-    enemies.push_back(Enemy(Vector3{-10.0f, 1.0f, 10.0f},
-                            Vector3{10.0f, 1.0f, 10.0f}, 4.0f));
+    enemies.push_back(
+        Enemy(Vector3{15.0f, 1.0f, 5.0f}, Vector3{15.0f, 1.0f, -15.0f}, 4.5f));
+    enemies.push_back(
+        Enemy(Vector3{-10.0f, 1.0f, 10.0f}, Vector3{10.0f, 1.0f, 10.0f}, 4.0f));
   } else if (levelIdx == 1) {
     enemies.push_back(Enemy(Vector3{-10.0f, 1.0f, -10.0f},
                             Vector3{10.0f, 1.0f, -10.0f}, 3.5f));
-    enemies.push_back(Enemy(Vector3{15.0f, 1.0f, 5.0f},
-                            Vector3{15.0f, 1.0f, -15.0f}, 4.0f));
+    enemies.push_back(
+        Enemy(Vector3{15.0f, 1.0f, 5.0f}, Vector3{15.0f, 1.0f, -15.0f}, 4.0f));
   } else if (levelIdx == 2) {
     enemies.push_back(Enemy(Vector3{-15.0f, 1.0f, -15.0f},
                             Vector3{15.0f, 1.0f, -15.0f}, 4.0f));
-    enemies.push_back(Enemy(Vector3{-10.0f, 1.0f, 10.0f},
-                            Vector3{10.0f, 1.0f, 10.0f}, 4.5f));
-    enemies.push_back(Enemy(Vector3{0.0f, 3.0f, -5.0f},
-                            Vector3{0.0f, 3.0f, 15.0f}, 3.5f));
+    enemies.push_back(
+        Enemy(Vector3{-10.0f, 1.0f, 10.0f}, Vector3{10.0f, 1.0f, 10.0f}, 4.5f));
+    enemies.push_back(
+        Enemy(Vector3{0.0f, 3.0f, -5.0f}, Vector3{0.0f, 3.0f, 15.0f}, 3.5f));
   } else { // Level 3
     enemies.push_back(Enemy(Vector3{-18.0f, 1.0f, -18.0f},
                             Vector3{18.0f, 1.0f, -18.0f}, 5.0f));
-    enemies.push_back(Enemy(Vector3{-18.0f, 1.0f, 18.0f},
-                            Vector3{18.0f, 1.0f, 18.0f}, 5.0f));
-    enemies.push_back(Enemy(Vector3{-10.0f, 5.0f, 0.0f},
-                            Vector3{10.0f, 5.0f, 0.0f}, 4.5f));
+    enemies.push_back(
+        Enemy(Vector3{-18.0f, 1.0f, 18.0f}, Vector3{18.0f, 1.0f, 18.0f}, 5.0f));
+    enemies.push_back(
+        Enemy(Vector3{-10.0f, 5.0f, 0.0f}, Vector3{10.0f, 5.0f, 0.0f}, 4.5f));
   }
 
   // Reset Collectible Boxes
@@ -92,7 +91,8 @@ void InitLevelContent(int levelIdx, Map &gameMap, std::vector<Enemy> &enemies,
 
 int main() {
   SetConfigFlags(FLAG_WINDOW_RESIZABLE);
-  InitWindow(1440, 860, "Tactical Radar - Military Drone Fleet Simulation & Combat Arena");
+  InitWindow(1440, 860,
+             "Tactical Radar - Military Drone Fleet Simulation & Combat Arena");
   SetTargetFPS(60);
 
   // Initialize Procedural Sound Synth Engine
@@ -128,7 +128,7 @@ int main() {
     float dt = GetFrameTime();
 
     if (IsKeyPressed(KEY_F11)) {
-        ToggleFullscreen();
+      ToggleFullscreen();
     }
 
     if (saveMessageTimer > 0.0f) {
@@ -197,8 +197,8 @@ int main() {
           if (activeEnemies < 10) {
             float sx = (float)GetRandomValue(-22, 22);
             float sz = (float)GetRandomValue(-22, 22);
-            enemies.push_back(Enemy(Vector3{sx, 1.0f, sz},
-                                    Vector3{-sx, 1.0f, -sz}, 4.0f));
+            enemies.push_back(
+                Enemy(Vector3{sx, 1.0f, sz}, Vector3{-sx, 1.0f, -sz}, 4.0f));
             particleSystem.EmitImpact(Vector3{sx, 1.0f, sz}, PURPLE);
           }
         }
@@ -360,13 +360,20 @@ int main() {
       fleetManager.UpdateFleetCamera(cameraController.camera, dt);
       fleetManager.Update(dt);
 
-      if (IsKeyPressed(KEY_M)) fleetManager.ToggleFullscreenMap();
-      if (IsKeyPressed(KEY_I)) fleetManager.ToggleDroneInspector();
-      if (IsKeyPressed(KEY_F1)) fleetManager.ToggleTelemetryPanel();
-      if (IsKeyPressed(KEY_F2)) fleetManager.ToggleResourcePanel();
-      if (IsKeyPressed(KEY_F3)) fleetManager.ToggleTerminalPanel();
-      if (IsKeyPressed(KEY_F4)) fleetManager.ToggleCameraBanner();
-      if (IsKeyPressed(KEY_F8)) fleetManager.ToggleAllPanels();
+      if (IsKeyPressed(KEY_M))
+        fleetManager.ToggleFullscreenMap();
+      if (IsKeyPressed(KEY_I))
+        fleetManager.ToggleDroneInspector();
+      if (IsKeyPressed(KEY_F1))
+        fleetManager.ToggleTelemetryPanel();
+      if (IsKeyPressed(KEY_F2))
+        fleetManager.ToggleResourcePanel();
+      if (IsKeyPressed(KEY_F3))
+        fleetManager.ToggleTerminalPanel();
+      if (IsKeyPressed(KEY_F4))
+        fleetManager.ToggleCameraBanner();
+      if (IsKeyPressed(KEY_F8))
+        fleetManager.ToggleAllPanels();
 
       if (IsKeyPressed(KEY_ESCAPE)) {
         AudioManager::Instance().PlayClick();
