@@ -38,6 +38,13 @@ public:
     bool hasRendezvous = false;
     int assignedSupportId = -1;
 
+    // Radio & Telemetry Link Metrics (SNR & Distance)
+    float distanceFromBase = 0.0f;
+    float snrDb = 45.0f;
+    float signalQuality = 1.0f; // 0.0 to 1.0
+    float telemetryLatencyMs = 12.0f;
+    float bitrateMbps = 12.0f;
+
     // Visual FX state
     bool isFiringLaser = false;
     Vector3 laserTargetPos = { 0.0f, 0.0f, 0.0f };

@@ -52,6 +52,7 @@ private:
     void DrawActiveMissionsPanel2D(const std::vector<EnemyCluster>& clusters, const std::vector<std::unique_ptr<Drone>>& drones) const;
     void DrawTacticalMap2D(int mapX, int mapY, int mapW, int mapH, bool fullscreen, const std::vector<std::unique_ptr<Drone>>& drones, const std::vector<EnemyCluster>& clusters) const;
     void DrawDroneInspector2D(const std::vector<std::unique_ptr<Drone>>& drones) const;
+    void DrawFPVSignalOverlay2D(const Drone& activeDrone) const;
 };
 
 } // namespace DroneFleet

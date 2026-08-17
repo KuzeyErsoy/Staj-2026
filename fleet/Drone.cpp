@@ -43,11 +43,40 @@ void Drone::ResetToDock() {
     assignedSupportId = -1;
     isFiringLaser = false;
     isResupplyBeamActive = false;
+    distanceFromBase = 0.0f;
+    snrDb = 45.0f;
+    signalQuality = 1.0f;
+    telemetryLatencyMs = 12.0f;
+    bitrateMbps = 12.0f;
 }
 
 void Drone::UpdateMovementPhysics(float targetSpeed, float dt) {
     rotorAngle += dt * 720.0f;
     if (rotorAngle > 360.0f) rotorAngle -= 360.0f;
+
+    // --- RADIO TELEMETRY & SNR COMPUTATION ---
+    if (isDestroyed) {
+        snrDb = 0.0f;
+        signalQuality = 0.0f;
+        bitrateMbps = 0.0f;
+        telemetryLatencyMs = 999.0f;
+    } else {
+        distanceFromBase = Vector3Distance(position, Vector3{ 0.0f, 0.0f, 0.0f });
+        // Logarithmic Path Loss: 45.0 dB at 20m, decreasing with 20 * log10(d / 20)
+        float refDist = 20.0f;
+        float distClamped = std::max(1.0f, distanceFromBase);
+        snrDb = 45.0f - 20.0f * log10f(distClamped / refDist);
+        snrDb = std::clamp(snrDb, 5.0f, 45.0f);
+
+        // Quality: 1.0 (at 45 dB) down to 0.0 (at 10 dB or less)
+        signalQuality = std::clamp((snrDb - 10.0f) / 35.0f, 0.0f, 1.0f);
+
+        // Latency: Base 12ms + 1ms per 25 meters
+        telemetryLatencyMs = 12.0f + (distanceFromBase / 25.0f);
+
+        // Adaptive bitrate: 12.0 Mbps down to 1.5 Mbps
+        bitrateMbps = 1.5f + (signalQuality * 10.5f);
+    }
 
     if (state == DroneState::IDLE_AT_BASE) {
         position = Vector3Lerp(position, baseDockPos, dt * 5.0f);

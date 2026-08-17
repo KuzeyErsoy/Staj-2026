@@ -183,8 +183,8 @@ void FleetHUD::DrawDroneInspector2D(const std::vector<std::unique_ptr<Drone>>& d
     int screenWidth = GetScreenWidth();
     int screenHeight = GetScreenHeight();
 
-    int panelW = 420;
-    int panelH = 500;
+    int panelW = 430;
+    int panelH = 550;
     int panelX = (screenWidth - panelW) / 2;
     int panelY = (screenHeight - panelH) / 2;
 
@@ -225,45 +225,177 @@ void FleetHUD::DrawDroneInspector2D(const std::vector<std::unique_ptr<Drone>>& d
         DrawCustomText(TextFormat("Velocity: %.1f m/s", Vector3Length(d->velocity)), panelX + 20, panelY + 118, 13.0f, LIGHTGRAY);
 
         DrawCustomText("HULL INTEGRITY:", panelX + 20, panelY + 140, 13.0f, GREEN);
-        DrawRectangle(panelX + 150, panelY + 142, 230, 14, DARKGRAY);
-        DrawRectangle(panelX + 150, panelY + 142, (int)(230 * (std::max(0.0f, d->hp) / d->maxHp)), 14, d->hp < 40.0f ? RED : (d->hp < 100.0f ? YELLOW : LIME));
-        DrawCustomText(TextFormat("%.0f / %.0f", std::max(0.0f, d->hp), d->maxHp), panelX + 390, panelY + 140, 11.0f, RAYWHITE);
+        DrawRectangle(panelX + 150, panelY + 142, 220, 13, DARKGRAY);
+        DrawRectangle(panelX + 150, panelY + 142, (int)(220 * (std::max(0.0f, d->hp) / d->maxHp)), 13, d->hp < 40.0f ? RED : (d->hp < 100.0f ? YELLOW : LIME));
+        DrawCustomText(TextFormat("%.0f / %.0f", std::max(0.0f, d->hp), d->maxHp), panelX + 380, panelY + 140, 11.0f, RAYWHITE);
 
-        DrawCustomText("FUEL CAPACITY:", panelX + 20, panelY + 165, 13.0f, YELLOW);
-        DrawRectangle(panelX + 150, panelY + 167, 230, 14, DARKGRAY);
-        DrawRectangle(panelX + 150, panelY + 167, (int)(230 * (d->fuel / d->maxFuel)), 14, YELLOW);
-        DrawCustomText(TextFormat("%.0f / %.0f", d->fuel, d->maxFuel), panelX + 390, panelY + 165, 11.0f, RAYWHITE);
+        DrawCustomText("FUEL CAPACITY:", panelX + 20, panelY + 162, 13.0f, YELLOW);
+        DrawRectangle(panelX + 150, panelY + 164, 220, 13, DARKGRAY);
+        DrawRectangle(panelX + 150, panelY + 164, (int)(220 * (d->fuel / d->maxFuel)), 13, YELLOW);
+        DrawCustomText(TextFormat("%.0f / %.0f", d->fuel, d->maxFuel), panelX + 380, panelY + 162, 11.0f, RAYWHITE);
 
         if (d->role != DroneRole::RECON) {
-            DrawCustomText("AMMO CAPACITY:", panelX + 20, panelY + 190, 13.0f, RED);
-            DrawRectangle(panelX + 150, panelY + 192, 230, 14, DARKGRAY);
-            DrawRectangle(panelX + 150, panelY + 192, (int)(230 * (d->ammo / d->maxAmmo)), 14, RED);
-            DrawCustomText(TextFormat("%.0f / %.0f", d->ammo, d->maxAmmo), panelX + 390, panelY + 190, 11.0f, RAYWHITE);
+            DrawCustomText("AMMO CAPACITY:", panelX + 20, panelY + 184, 13.0f, RED);
+            DrawRectangle(panelX + 150, panelY + 186, 220, 13, DARKGRAY);
+            DrawRectangle(panelX + 150, panelY + 186, (int)(220 * (d->ammo / d->maxAmmo)), 13, RED);
+            DrawCustomText(TextFormat("%.0f / %.0f", d->ammo, d->maxAmmo), panelX + 380, panelY + 184, 11.0f, RAYWHITE);
         } else {
-            DrawCustomText("WEAPONS / AMMO:", panelX + 20, panelY + 190, 13.0f, GRAY);
-            DrawCustomText("[ NO WEAPONS / UNARMED SCOUT ]", panelX + 150, panelY + 190, 12.0f, GRAY);
+            DrawCustomText("WEAPONS / AMMO:", panelX + 20, panelY + 184, 13.0f, GRAY);
+            DrawCustomText("[ NO WEAPONS / UNARMED SCOUT ]", panelX + 150, panelY + 184, 12.0f, GRAY);
         }
 
         if (d->role == DroneRole::SUPPORT) {
             SupportDrone* sup = dynamic_cast<SupportDrone*>(d.get());
             if (sup) {
-                DrawCustomText("CARGO FUEL:", panelX + 20, panelY + 215, 13.0f, LIME);
-                DrawRectangle(panelX + 150, panelY + 217, 230, 14, DARKGRAY);
-                DrawRectangle(panelX + 150, panelY + 217, (int)(230 * (sup->cargoFuel / 600.0f)), 14, LIME);
+                DrawCustomText("CARGO FUEL:", panelX + 20, panelY + 206, 13.0f, LIME);
+                DrawRectangle(panelX + 150, panelY + 208, 220, 13, DARKGRAY);
+                DrawRectangle(panelX + 150, panelY + 208, (int)(220 * (sup->cargoFuel / 600.0f)), 13, LIME);
             }
         }
 
-        DrawCustomText("INDIVIDUAL FLIGHT ACTION LOGS:", panelX + 20, panelY + 245, 14.0f, LIME);
-        DrawLine(panelX + 20, panelY + 263, panelX + panelW - 20, panelY + 263, LIME);
+        // RF TELEMETRY & SNR LINK STATUS
+        int rfY = (d->role == DroneRole::SUPPORT) ? 228 : 208;
+        DrawCustomText("RF LINK & SNR:", panelX + 20, rfY, 13.0f, SKYBLUE);
+        DrawRectangle(panelX + 150, rfY + 2, 220, 13, DARKGRAY);
+        Color snrCol = d->isDestroyed ? RED : (d->snrDb < 15.0f ? RED : (d->snrDb < 25.0f ? YELLOW : LIME));
+        DrawRectangle(panelX + 150, rfY + 2, (int)(220 * d->signalQuality), 13, snrCol);
+        DrawCustomText(TextFormat("%.1f dB", d->snrDb), panelX + 380, rfY, 11.0f, snrCol);
 
-        int logY = panelY + 273;
+        DrawCustomText(TextFormat("Range to Base: %.1fm | Latency: %.0fms | Bitrate: %.1f Mb/s", d->distanceFromBase, d->telemetryLatencyMs, d->bitrateMbps), panelX + 20, rfY + 20, 11.0f, LIGHTGRAY);
+
+        int logHeaderY = rfY + 44;
+        DrawCustomText("INDIVIDUAL FLIGHT ACTION LOGS:", panelX + 20, logHeaderY, 14.0f, LIME);
+        DrawLine(panelX + 20, logHeaderY + 18, panelX + panelW - 20, logHeaderY + 18, LIME);
+
+        int logY = logHeaderY + 26;
         for (const auto& logMsg : d->actionLogs) {
-            DrawCustomText(logMsg.c_str(), panelX + 25, logY, 12.0f, RAYWHITE);
-            logY += 18;
+            DrawCustomText(logMsg.c_str(), panelX + 25, logY, 11.0f, RAYWHITE);
+            logY += 17;
         }
     }
 
-    DrawCustomText("[1..9] Select Drone | [I] Close Inspector", panelX + panelW / 2 - 120, panelY + panelH - 25, 12.0f, GRAY);
+    DrawCustomText("[1..9] Select Drone | [I] Close Inspector", panelX + panelW / 2 - 120, panelY + panelH - 22, 12.0f, GRAY);
+}
+
+void FleetHUD::DrawFPVSignalOverlay2D(const Drone& activeDrone) const {
+    int screenWidth = GetScreenWidth();
+    int screenHeight = GetScreenHeight();
+
+    // 1. Check if drone is destroyed
+    if (activeDrone.isDestroyed) {
+        // Heavy static noise
+        for (int i = 0; i < 400; i++) {
+            int rx = GetRandomValue(0, screenWidth);
+            int ry = GetRandomValue(0, screenHeight);
+            int rw = GetRandomValue(2, 8);
+            int rh = GetRandomValue(1, 3);
+            DrawRectangle(rx, ry, rw, rh, Fade(RAYWHITE, (float)GetRandomValue(30, 90) / 100.0f));
+        }
+        for (int i = 0; i < 15; i++) {
+            int ry = GetRandomValue(0, screenHeight);
+            int rh = GetRandomValue(2, 6);
+            DrawRectangle(0, ry, screenWidth, rh, Fade(RED, 0.25f));
+        }
+
+        // Center Loss Banner
+        int bannerW = 600;
+        int bannerH = 80;
+        int bx = (screenWidth - bannerW) / 2;
+        int by = (screenHeight - bannerH) / 2;
+        DrawRectangle(bx, by, bannerW, bannerH, Color{ 20, 2, 2, 240 });
+        DrawRectangleLines(bx, by, bannerW, bannerH, RED);
+        DrawCustomText("[ NO RF CARRIER // TRANSMISSION TERMINATED ]", bx + 30, by + 18, 18.0f, RED);
+        DrawCustomText(TextFormat("DOWNED DRONE #%d AT (%.1f, %.1f) - AWAITING COMBAT SAR", activeDrone.id, activeDrone.position.x, activeDrone.position.z), bx + 30, by + 48, 13.0f, YELLOW);
+        return;
+    }
+
+    // 2. FPV Military OSD Crosshairs / Corner Brackets
+    int cornerMargin = 40;
+    int bracketLen = 30;
+    Color bracketCol = Fade(LIME, 0.4f);
+    // Top-Left
+    DrawLine(cornerMargin, cornerMargin, cornerMargin + bracketLen, cornerMargin, bracketCol);
+    DrawLine(cornerMargin, cornerMargin, cornerMargin, cornerMargin + bracketLen, bracketCol);
+    // Top-Right
+    DrawLine(screenWidth - cornerMargin, cornerMargin, screenWidth - cornerMargin - bracketLen, cornerMargin, bracketCol);
+    DrawLine(screenWidth - cornerMargin, cornerMargin, screenWidth - cornerMargin, cornerMargin + bracketLen, bracketCol);
+    // Bottom-Left
+    DrawLine(cornerMargin, screenHeight - cornerMargin, cornerMargin + bracketLen, screenHeight - cornerMargin, bracketCol);
+    DrawLine(cornerMargin, screenHeight - cornerMargin, cornerMargin, screenHeight - cornerMargin - bracketLen, bracketCol);
+    // Bottom-Right
+    DrawLine(screenWidth - cornerMargin, screenHeight - cornerMargin, screenWidth - cornerMargin - bracketLen, screenHeight - cornerMargin, bracketCol);
+    DrawLine(screenWidth - cornerMargin, screenHeight - cornerMargin, screenWidth - cornerMargin, screenHeight - cornerMargin - bracketLen, bracketCol);
+
+    // 3. Dynamic Grain, Static Scanlines & Color Glitch based on (1.0 - signalQuality)
+    float noiseIntensity = 1.0f - activeDrone.signalQuality; // 0.0 at 45dB to 1.0 at <10dB
+
+    if (noiseIntensity > 0.08f) {
+        // Digital grain particles
+        int grainCount = (int)(noiseIntensity * 350.0f);
+        for (int i = 0; i < grainCount; i++) {
+            int rx = GetRandomValue(0, screenWidth);
+            int ry = GetRandomValue(0, screenHeight);
+            int rw = GetRandomValue(1, 4);
+            int rh = GetRandomValue(1, 2);
+            DrawRectangle(rx, ry, rw, rh, Fade(RAYWHITE, noiseIntensity * (float)GetRandomValue(20, 70) / 100.0f));
+        }
+
+        // Horizontal glitch scanlines
+        int lineCount = (int)(noiseIntensity * 12.0f);
+        for (int i = 0; i < lineCount; i++) {
+            int ry = GetRandomValue(0, screenHeight);
+            int rh = GetRandomValue(1, 4);
+            Color glitchCol = (GetRandomValue(0, 10) > 7) ? Fade(RED, noiseIntensity * 0.4f) : Fade(SKYBLUE, noiseIntensity * 0.3f);
+            DrawRectangle(0, ry, screenWidth, rh, glitchCol);
+        }
+
+        // Vignette darkening at edges if signal is very low
+        if (noiseIntensity > 0.5f) {
+            DrawRectangleLinesEx(Rectangle{ 0, 0, (float)screenWidth, (float)screenHeight }, (noiseIntensity - 0.5f) * 40.0f, Fade(BLACK, (noiseIntensity - 0.5f) * 0.7f));
+        }
+    }
+
+    // 4. Military FPV Telemetry HUD Banner (Center-Top under Camera banner)
+    int osdW = 500;
+    int osdH = 52;
+    int osdX = (screenWidth - osdW) / 2;
+    int osdY = 88;
+
+    DrawRectangle(osdX, osdY, osdW, osdH, Color{ 4, 10, 20, 210 });
+    Color frameBorderCol = activeDrone.snrDb < 15.0f ? RED : (activeDrone.snrDb < 25.0f ? YELLOW : LIME);
+    DrawRectangleLines(osdX, osdY, osdW, osdH, frameBorderCol);
+
+    // Left side: RF LINK & SNR
+    DrawCustomText("RF LINK:", osdX + 12, osdY + 8, 11.0f, LIGHTGRAY);
+    DrawCustomText(TextFormat("%.1f dB", activeDrone.snrDb), osdX + 68, osdY + 6, 14.0f, frameBorderCol);
+
+    // SNR Bar
+    int barW = 95;
+    int barH = 8;
+    int barX = osdX + 135;
+    int barY = osdY + 10;
+    DrawRectangle(barX, barY, barW, barH, DARKGRAY);
+    DrawRectangle(barX, barY, (int)(barW * activeDrone.signalQuality), barH, frameBorderCol);
+    DrawRectangleLines(barX, barY, barW, barH, Fade(WHITE, 0.4f));
+
+    // Range & Bitrate & Latency
+    DrawCustomText(TextFormat("RANGE: %.0fm", activeDrone.distanceFromBase), osdX + 245, osdY + 7, 12.0f, RAYWHITE);
+    DrawCustomText(TextFormat("RATE: %.1f Mb/s", activeDrone.bitrateMbps), osdX + 365, osdY + 7, 12.0f, SKYBLUE);
+
+    DrawCustomText(TextFormat("LATENCY: %.0f ms", activeDrone.telemetryLatencyMs), osdX + 12, osdY + 30, 11.0f, LIGHTGRAY);
+    const char* qualityStatus = activeDrone.snrDb >= 30.0f ? "HD VIDEO (1080p60)" : (activeDrone.snrDb >= 20.0f ? "GOOD LINK (720p30)" : (activeDrone.snrDb >= 13.0f ? "DEGRADED (480p SD)" : "CRITICAL NOISE (PACKET LOSS)"));
+    DrawCustomText(qualityStatus, osdX + 135, osdY + 30, 11.0f, frameBorderCol);
+
+    // Blinking warning banner if SNR < 15 dB
+    if (activeDrone.snrDb < 15.0f) {
+        if (((int)(GetTime() * 3)) % 2 == 0) {
+            const char* warnStr = activeDrone.snrDb < 10.0f ? "CRITICAL: RF TELEMETRY LINK NEAR BREAKPOINT // RANGE EXCEEDED" : "WARNING: RF SIGNAL DEGRADATION DETECTED (LOW SNR)";
+            float warnW = fontLoaded ? MeasureTextEx(customFont, warnStr, 13.0f, 1.0f).x : (float)MeasureText(warnStr, 13);
+            DrawRectangle((int)((screenWidth - warnW) / 2.0f) - 10, osdY + osdH + 6, (int)warnW + 20, 22, Color{ 30, 4, 4, 230 });
+            DrawRectangleLines((int)((screenWidth - warnW) / 2.0f) - 10, osdY + osdH + 6, (int)warnW + 20, 22, RED);
+            DrawCustomText(warnStr, (screenWidth - warnW) / 2.0f, osdY + osdH + 10, 13.0f, RED);
+        }
+    }
 }
 
 void FleetHUD::Draw2DHUD(const TelemetryContext& telemetry,
@@ -279,6 +411,15 @@ void FleetHUD::Draw2DHUD(const TelemetryContext& telemetry,
         DrawTacticalMap2D(20, 20, screenWidth - 40, screenHeight - 40, true, drones, clusters);
         DrawCustomText("[M] Exit Fullscreen Map Mode", 40, screenHeight - 50, 15.0f, GOLD);
         return;
+    }
+
+    // 0. FPV Camera Telemetry & Dynamic Static Noise (when tracking Drone 1..9)
+    int activeCam = fleetCam.GetActiveCameraMode();
+    if (activeCam >= 1 && activeCam <= 9) {
+        int droneIdx = activeCam - 1;
+        if (droneIdx >= 0 && droneIdx < (int)drones.size()) {
+            DrawFPVSignalOverlay2D(*drones[droneIdx]);
+        }
     }
 
     // 1. Top-Left Telemetry Panel
@@ -312,7 +453,7 @@ void FleetHUD::Draw2DHUD(const TelemetryContext& telemetry,
 
     // 3. Top-Right Fleet Resource Panel (9 Drones)
     if (showResourcePanel) {
-        int rightW = 380;
+        int rightW = 425;
         int rightH = 260;
         int rightX = screenWidth - rightW - 20;
         int rightY = 15;
@@ -349,24 +490,31 @@ void FleetHUD::Draw2DHUD(const TelemetryContext& telemetry,
                 }
             }
 
-            DrawCustomText(TextFormat("#%-2d %s", d->id, roleStr), rightX + 10, startY, 10.0f, roleCol);
-            DrawCustomText(tag, rightX + 115, startY, 10.0f, tagCol);
+            DrawCustomText(TextFormat("#%-2d %s", d->id, roleStr), rightX + 8, startY, 10.0f, roleCol);
+            DrawCustomText(tag, rightX + 110, startY, 10.0f, tagCol);
 
-            DrawCustomText("H", rightX + 165, startY, 10.0f, LIGHTGRAY);
-            DrawRectangle(rightX + 175, startY + 2, 45, 8, DARKGRAY);
-            DrawRectangle(rightX + 175, startY + 2, (int)(45 * (std::max(0.0f, d->hp) / d->maxHp)), 8, d->hp < 40.0f ? RED : (d->hp < 100.0f ? YELLOW : LIME));
+            DrawCustomText("H", rightX + 158, startY, 10.0f, LIGHTGRAY);
+            DrawRectangle(rightX + 168, startY + 2, 40, 8, DARKGRAY);
+            DrawRectangle(rightX + 168, startY + 2, (int)(40 * (std::max(0.0f, d->hp) / d->maxHp)), 8, d->hp < 40.0f ? RED : (d->hp < 100.0f ? YELLOW : LIME));
 
-            DrawCustomText("F", rightX + 228, startY, 10.0f, LIGHTGRAY);
-            DrawRectangle(rightX + 240, startY + 2, 50, 8, DARKGRAY);
-            DrawRectangle(rightX + 240, startY + 2, (int)(50 * (d->fuel / d->maxFuel)), 8, YELLOW);
+            DrawCustomText("F", rightX + 214, startY, 10.0f, LIGHTGRAY);
+            DrawRectangle(rightX + 224, startY + 2, 42, 8, DARKGRAY);
+            DrawRectangle(rightX + 224, startY + 2, (int)(42 * (d->fuel / d->maxFuel)), 8, YELLOW);
 
             if (d->role != DroneRole::RECON) {
-                DrawCustomText("A", rightX + 298, startY, 10.0f, LIGHTGRAY);
-                DrawRectangle(rightX + 310, startY + 2, 50, 8, DARKGRAY);
-                DrawRectangle(rightX + 310, startY + 2, (int)(50 * (d->ammo / d->maxAmmo)), 8, RED);
+                DrawCustomText("A", rightX + 272, startY, 10.0f, LIGHTGRAY);
+                DrawRectangle(rightX + 282, startY + 2, 42, 8, DARKGRAY);
+                DrawRectangle(rightX + 282, startY + 2, (int)(42 * (d->ammo / d->maxAmmo)), 8, RED);
             } else {
-                DrawCustomText("-", rightX + 325, startY, 10.0f, DARKGRAY);
+                DrawCustomText("A -", rightX + 272, startY, 10.0f, DARKGRAY);
             }
+
+            // S - Signal / SNR bar & value
+            DrawCustomText("S", rightX + 332, startY, 10.0f, LIGHTGRAY);
+            DrawRectangle(rightX + 342, startY + 2, 38, 8, DARKGRAY);
+            Color sigCol = d->isDestroyed ? RED : (d->snrDb < 15.0f ? RED : (d->snrDb < 25.0f ? YELLOW : LIME));
+            DrawRectangle(rightX + 342, startY + 2, (int)(38 * d->signalQuality), 8, sigCol);
+            DrawCustomText(TextFormat("%.0fdB", d->snrDb), rightX + 385, startY, 9.0f, sigCol);
 
             startY += 22;
         }
@@ -463,5 +611,6 @@ void FleetHUD::Draw2DHUD(const TelemetryContext& telemetry,
         DrawDroneInspector2D(drones);
     }
 }
+
 
 } // namespace DroneFleet
