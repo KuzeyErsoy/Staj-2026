@@ -36,7 +36,7 @@ public:
     void Init();
     void LaunchMissile(int launcherId, Vector3 startPos, Vector3 targetPos, int clusterId, int targetEnemyId);
     void Update(ClusterManager& clusterMgr, TelemetryContext& telemetry, float dt);
-    void Draw3D() const;
+    void Draw3D(VisionMode visionMode = VisionMode::NORMAL) const;
     void Clear();
 
     const std::vector<MicroMissile>& GetMissiles() const { return missiles; }

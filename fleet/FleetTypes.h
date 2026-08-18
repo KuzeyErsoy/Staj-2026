@@ -36,6 +36,12 @@ enum class ClusterStatus {
     REQUIRES_RECON
 };
 
+enum class VisionMode {
+    NORMAL,
+    FLIR_THERMAL,
+    NVG_GREEN
+};
+
 // --- DATA STRUCTURES ---
 struct Enemy {
     int id = 0;

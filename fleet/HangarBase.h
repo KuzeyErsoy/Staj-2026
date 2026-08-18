@@ -11,7 +11,7 @@ public:
 
     void Init();
     void UpdateBaseRefill(Drone& drone, FleetContext& ctx, float dt);
-    void Draw3D(const std::vector<std::unique_ptr<Drone>>& drones) const;
+    void Draw3D(const std::vector<std::unique_ptr<Drone>>& drones, VisionMode visionMode = VisionMode::NORMAL) const;
 
     Vector3 GetPosition() const { return position; }
     float GetRadius() const { return radius; }

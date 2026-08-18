@@ -14,7 +14,7 @@ public:
     void SpawnCluster();
     void SpawnCustomCluster(bool forceArmed, int forceMag = 0);
     void Update(FleetContext& ctx, float dt);
-    void Draw3D(const std::vector<std::unique_ptr<Drone>>& drones) const;
+    void Draw3D(const std::vector<std::unique_ptr<Drone>>& drones, VisionMode visionMode = VisionMode::NORMAL) const;
 
     EnemyCluster* GetClusterById(int id);
     std::vector<EnemyCluster>& GetClusters() { return clusters; }

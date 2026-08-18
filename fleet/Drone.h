@@ -56,7 +56,7 @@ public:
 
     void LogAction(const std::string& msg);
     virtual void Update(FleetContext& ctx, float dt) = 0;
-    virtual void Draw3D() const;
+    virtual void Draw3D(VisionMode visionMode = VisionMode::NORMAL) const;
     virtual void ResetToDock();
 
 protected:
@@ -72,7 +72,7 @@ public:
 
     ReconDrone(int id, Vector3 dockPos, int startingSector = 0);
     void Update(FleetContext& ctx, float dt) override;
-    void Draw3D() const override;
+    void Draw3D(VisionMode visionMode = VisionMode::NORMAL) const override;
 };
 
 // --- TASK FORCE DRONE (COMBAT STRIKE / PINCER FORMATION / MISSILES) ---
@@ -82,7 +82,7 @@ public:
 
     TaskForceDrone(int id, Vector3 dockPos);
     void Update(FleetContext& ctx, float dt) override;
-    void Draw3D() const override;
+    void Draw3D(VisionMode visionMode = VisionMode::NORMAL) const override;
 };
 
 // --- SUPPORT DRONE (CARGO TANKER / COMBAT MEDIC / FORWARD LOITERING) ---
@@ -98,7 +98,7 @@ public:
 
     SupportDrone(int id, Vector3 dockPos);
     void Update(FleetContext& ctx, float dt) override;
-    void Draw3D() const override;
+    void Draw3D(VisionMode visionMode = VisionMode::NORMAL) const override;
     void ResetToDock() override;
 };
 

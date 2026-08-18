@@ -180,13 +180,19 @@ void ClusterManager::Update(FleetContext& ctx, float dt) {
     }
 }
 
-void ClusterManager::Draw3D(const std::vector<std::unique_ptr<Drone>>& drones) const {
+void ClusterManager::Draw3D(const std::vector<std::unique_ptr<Drone>>& drones, VisionMode visionMode) const {
     for (const auto& c : clusters) {
         if (c.status == ClusterStatus::CLEARED) continue;
 
         Color ringColor = RED;
-        if (c.status == ClusterStatus::UNDETECTED) ringColor = Color{ 220, 220, 50, 180 };
-        else if (c.status == ClusterStatus::REPORTED) ringColor = ORANGE;
+        if (visionMode == VisionMode::FLIR_THERMAL) {
+            ringColor = (c.status == ClusterStatus::UNDETECTED) ? Color{ 255, 180, 50, 160 } : Color{ 255, 80, 20, 220 };
+        } else if (visionMode == VisionMode::NVG_GREEN) {
+            ringColor = (c.status == ClusterStatus::UNDETECTED) ? Color{ 140, 255, 80, 160 } : Color{ 50, 255, 100, 220 };
+        } else {
+            if (c.status == ClusterStatus::UNDETECTED) ringColor = Color{ 220, 220, 50, 180 };
+            else if (c.status == ClusterStatus::REPORTED) ringColor = ORANGE;
+        }
 
         DrawCircle3D(c.centerPosition, 18.0f, Vector3{ 1, 0, 0 }, 90.0f, ringColor);
 
@@ -194,6 +200,11 @@ void ClusterManager::Draw3D(const std::vector<std::unique_ptr<Drone>>& drones) c
         if (c.status == ClusterStatus::REPORTED || c.status == ClusterStatus::ENGAGED) {
             Vector3 bannerPos = Vector3{ c.centerPosition.x, 14.0f, c.centerPosition.z };
             Color bannerCol = (c.armedCount > 0) ? Color{ 255, 30, 30, 255 } : Color{ 240, 160, 20, 255 };
+            if (visionMode == VisionMode::FLIR_THERMAL) {
+                bannerCol = (c.armedCount > 0) ? Color{ 255, 100, 40, 255 } : Color{ 255, 180, 40, 255 };
+            } else if (visionMode == VisionMode::NVG_GREEN) {
+                bannerCol = (c.armedCount > 0) ? Color{ 255, 80, 80, 255 } : Color{ 120, 255, 120, 255 };
+            }
 
             DrawCube(bannerPos, 24.0f, 4.0f, 0.4f, Color{ 10, 15, 25, 230 });
             DrawCubeWires(bannerPos, 24.2f, 4.2f, 0.5f, bannerCol);
@@ -204,27 +215,82 @@ void ClusterManager::Draw3D(const std::vector<std::unique_ptr<Drone>>& drones) c
         for (const auto& e : c.enemies) {
             if (!e.isAlive) continue;
 
-            Color enemyColor = e.isArmed ? Color{ 255, 30, 30, 255 } : Color{ 240, 150, 20, 255 };
-            Color wireColor = e.isArmed ? MAROON : GOLD;
+            if (visionMode == VisionMode::FLIR_THERMAL) {
+                // --- FLIR THERMAL HEAT SIGNATURE ---
+                // 1. Hot radiant infrared ground halo
+                float heatPulse = 0.4f + 0.25f * sinf(GetTime() * 8.0f + (float)e.id);
+                Color haloColor = e.isArmed ? Color{ 255, 90, 20, 255 } : Color{ 255, 140, 30, 255 };
+                DrawCircle3D(Vector3{ e.position.x, 0.2f, e.position.z }, 2.6f, Vector3{ 1, 0, 0 }, 90.0f, Fade(haloColor, heatPulse));
 
-            if (e.panicTimer > 0.0f) enemyColor = Color{ 255, 200, 0, 255 };
+                // 2. Radiant infrared outer shell
+                Color shellColor = e.isArmed ? Color{ 255, 95, 15, 230 } : Color{ 255, 135, 20, 230 };
+                if (e.panicTimer > 0.0f) shellColor = Color{ 255, 220, 50, 255 };
+                DrawCube(e.position, 2.0f, 2.0f, 2.0f, shellColor);
 
-            DrawCube(e.position, 2.0f, 2.0f, 2.0f, enemyColor);
-            DrawCubeWires(e.position, 2.1f, 2.1f, 2.1f, wireColor);
+                // 3. Super-heated White-Hot inner core
+                DrawCube(e.position, 1.2f, 1.2f, 1.2f, Color{ 255, 255, 245, 255 });
+                DrawCubeWires(e.position, 2.1f, 2.1f, 2.1f, Color{ 255, 240, 180, 255 });
 
-            if (e.isFiringCounterAttack) {
-                DrawLine3D(e.position, e.counterAttackTargetPos, MAROON);
-                DrawSphere(e.counterAttackTargetPos, 0.4f, RED);
+                // Counter-attack tracer
+                if (e.isFiringCounterAttack) {
+                    DrawLine3D(e.position, e.counterAttackTargetPos, Color{ 255, 255, 255, 255 });
+                    DrawSphere(e.counterAttackTargetPos, 0.5f, Color{ 255, 120, 30, 255 });
+                }
+
+                if (e.panicTimer > 0.0f) {
+                    DrawCircle3D(e.position, 3.0f, Vector3{ 1, 0, 0 }, 90.0f, Color{ 255, 230, 60, 220 });
+                }
+
+                // Thermal Health bar
+                float hpPct = std::max(0.0f, e.hp / e.maxHp);
+                DrawCube(Vector3{ e.position.x, e.position.y + 2.2f, e.position.z }, 2.0f, 0.3f, 0.3f, Color{ 25, 30, 40, 255 });
+                DrawCube(Vector3{ e.position.x - (1.0f - hpPct), e.position.y + 2.2f, e.position.z }, 2.0f * hpPct, 0.3f, 0.3f, Color{ 255, 240, 160, 255 });
+            } else if (visionMode == VisionMode::NVG_GREEN) {
+                // --- NVG GREEN PHOSPHOR SIGNATURE ---
+                Color enemyColor = e.isArmed ? Color{ 240, 80, 80, 255 } : Color{ 40, 220, 80, 255 };
+                Color wireColor = e.isArmed ? Color{ 255, 140, 140, 255 } : Color{ 140, 255, 160, 255 };
+
+                if (e.panicTimer > 0.0f) enemyColor = Color{ 220, 255, 80, 255 };
+
+                DrawCube(e.position, 2.0f, 2.0f, 2.0f, enemyColor);
+                DrawCubeWires(e.position, 2.1f, 2.1f, 2.1f, wireColor);
+
+                if (e.isFiringCounterAttack) {
+                    DrawLine3D(e.position, e.counterAttackTargetPos, Color{ 255, 100, 100, 255 });
+                    DrawSphere(e.counterAttackTargetPos, 0.4f, Color{ 255, 180, 180, 255 });
+                }
+
+                if (e.panicTimer > 0.0f) {
+                    DrawCircle3D(e.position, 2.8f, Vector3{ 1, 0, 0 }, 90.0f, Color{ 180, 255, 100, 255 });
+                }
+
+                float hpPct = std::max(0.0f, e.hp / e.maxHp);
+                DrawCube(Vector3{ e.position.x, e.position.y + 2.2f, e.position.z }, 2.0f, 0.3f, 0.3f, Color{ 10, 35, 15, 255 });
+                DrawCube(Vector3{ e.position.x - (1.0f - hpPct), e.position.y + 2.2f, e.position.z }, 2.0f * hpPct, 0.3f, 0.3f, Color{ 80, 255, 120, 255 });
+            } else {
+                // --- NORMAL RENDERING ---
+                Color enemyColor = e.isArmed ? Color{ 255, 30, 30, 255 } : Color{ 240, 150, 20, 255 };
+                Color wireColor = e.isArmed ? MAROON : GOLD;
+
+                if (e.panicTimer > 0.0f) enemyColor = Color{ 255, 200, 0, 255 };
+
+                DrawCube(e.position, 2.0f, 2.0f, 2.0f, enemyColor);
+                DrawCubeWires(e.position, 2.1f, 2.1f, 2.1f, wireColor);
+
+                if (e.isFiringCounterAttack) {
+                    DrawLine3D(e.position, e.counterAttackTargetPos, MAROON);
+                    DrawSphere(e.counterAttackTargetPos, 0.4f, RED);
+                }
+
+                if (e.panicTimer > 0.0f) {
+                    DrawCircle3D(e.position, 2.8f, Vector3{ 1, 0, 0 }, 90.0f, YELLOW);
+                }
+
+                // Health bar
+                float hpPct = std::max(0.0f, e.hp / e.maxHp);
+                DrawCube(Vector3{ e.position.x, e.position.y + 2.2f, e.position.z }, 2.0f, 0.3f, 0.3f, DARKGRAY);
+                DrawCube(Vector3{ e.position.x - (1.0f - hpPct), e.position.y + 2.2f, e.position.z }, 2.0f * hpPct, 0.3f, 0.3f, e.isArmed ? RED : ORANGE);
             }
-
-            if (e.panicTimer > 0.0f) {
-                DrawCircle3D(e.position, 2.8f, Vector3{ 1, 0, 0 }, 90.0f, YELLOW);
-            }
-
-            // Health bar
-            float hpPct = std::max(0.0f, e.hp / e.maxHp);
-            DrawCube(Vector3{ e.position.x, e.position.y + 2.2f, e.position.z }, 2.0f, 0.3f, 0.3f, DARKGRAY);
-            DrawCube(Vector3{ e.position.x - (1.0f - hpPct), e.position.y + 2.2f, e.position.z }, 2.0f * hpPct, 0.3f, 0.3f, e.isArmed ? RED : ORANGE);
         }
     }
 
@@ -232,8 +298,10 @@ void ClusterManager::Draw3D(const std::vector<std::unique_ptr<Drone>>& drones) c
     for (const auto& d : drones) {
         if (d->isDestroyed) continue;
         if (d->hasRendezvous) {
-            DrawCircle3D(d->rendezvousPos, 12.0f, Vector3{ 1, 0, 0 }, 90.0f, GOLD);
-            DrawCircle3D(d->rendezvousPos, 6.0f, Vector3{ 1, 0, 0 }, 90.0f, YELLOW);
+            Color rColor1 = (visionMode == VisionMode::FLIR_THERMAL) ? Color{ 255, 180, 50, 220 } : ((visionMode == VisionMode::NVG_GREEN) ? Color{ 140, 255, 80, 220 } : GOLD);
+            Color rColor2 = (visionMode == VisionMode::FLIR_THERMAL) ? Color{ 255, 240, 140, 220 } : ((visionMode == VisionMode::NVG_GREEN) ? Color{ 200, 255, 120, 220 } : YELLOW);
+            DrawCircle3D(d->rendezvousPos, 12.0f, Vector3{ 1, 0, 0 }, 90.0f, rColor1);
+            DrawCircle3D(d->rendezvousPos, 6.0f, Vector3{ 1, 0, 0 }, 90.0f, rColor2);
         }
     }
 }

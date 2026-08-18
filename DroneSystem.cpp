@@ -159,6 +159,14 @@ void DroneSystemManager::Update(float dt) {
         if (IsAudioDeviceReady()) AudioManager::Instance().PlayClick();
     }
 
+    // Hotkeys for Vision Modes
+    if (IsKeyPressed(KEY_T)) {
+        ToggleThermalFLIR();
+    }
+    if (IsKeyPressed(KEY_N)) {
+        ToggleNightVision();
+    }
+
     float effectiveDt = isPaused ? 0.0f : dt * timeScale;
     if (effectiveDt <= 0.0f) return;
 
@@ -187,13 +195,34 @@ void DroneSystemManager::Update(float dt) {
     UpdateTelemetry();
 }
 
+void DroneSystemManager::ToggleThermalFLIR() {
+    fleetHUD.ToggleThermalFLIR();
+    if (fleetHUD.GetVisionMode() == VisionMode::FLIR_THERMAL) {
+        LogTerminal("[OPTICS SENSOR] FLIR Thermal LWIR Mode Activated (White-Hot).");
+    } else {
+        LogTerminal("[OPTICS SENSOR] Normal Daylight Camera Mode Restored.");
+    }
+    if (IsAudioDeviceReady()) AudioManager::Instance().PlayClick();
+}
+
+void DroneSystemManager::ToggleNightVision() {
+    fleetHUD.ToggleNightVision();
+    if (fleetHUD.GetVisionMode() == VisionMode::NVG_GREEN) {
+        LogTerminal("[OPTICS SENSOR] NVG Gen-3 Green Phosphor Mode Activated.");
+    } else {
+        LogTerminal("[OPTICS SENSOR] Normal Daylight Camera Mode Restored.");
+    }
+    if (IsAudioDeviceReady()) AudioManager::Instance().PlayClick();
+}
+
 void DroneSystemManager::Draw3D() const {
-    hangarBase.Draw3D(drones);
-    clusterManager.Draw3D(drones);
-    missileSystem.Draw3D();
+    VisionMode vm = fleetHUD.GetVisionMode();
+    hangarBase.Draw3D(drones, vm);
+    clusterManager.Draw3D(drones, vm);
+    missileSystem.Draw3D(vm);
 
     for (const auto& d : drones) {
-        d->Draw3D();
+        d->Draw3D(vm);
     }
 }
 

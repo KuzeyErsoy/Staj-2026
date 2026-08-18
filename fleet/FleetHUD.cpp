@@ -4,6 +4,7 @@
 #include "ClusterManager.h"
 #include <algorithm>
 #include <cstdio>
+#include <cmath>
 
 namespace DroneFleet {
 
@@ -53,6 +54,22 @@ void FleetHUD::ToggleAllPanels() {
     showTerminalPanel = !anyOn;
     showCameraBanner = !anyOn;
     showTacticalMap = !anyOn;
+}
+
+void FleetHUD::ToggleThermalFLIR() {
+    if (visionMode == VisionMode::FLIR_THERMAL) {
+        visionMode = VisionMode::NORMAL;
+    } else {
+        visionMode = VisionMode::FLIR_THERMAL;
+    }
+}
+
+void FleetHUD::ToggleNightVision() {
+    if (visionMode == VisionMode::NVG_GREEN) {
+        visionMode = VisionMode::NORMAL;
+    } else {
+        visionMode = VisionMode::NVG_GREEN;
+    }
 }
 
 void FleetHUD::DrawTacticalMap2D(int mapX, int mapY, int mapW, int mapH, bool fullscreen, const std::vector<std::unique_ptr<Drone>>& drones, const std::vector<EnemyCluster>& clusters) const {
@@ -413,7 +430,13 @@ void FleetHUD::Draw2DHUD(const TelemetryContext& telemetry,
         return;
     }
 
-    // 0. FPV Camera Telemetry & Dynamic Static Noise (when tracking Drone 1..9)
+    // 0. FLIR / NVG Scanline & Reticle Overlay (if enabled)
+    if (visionMode != VisionMode::NORMAL) {
+        Camera3D currentCam = fleetCam.GetCurrentCamera3D(drones);
+        DrawFLIROverlay2D(currentCam, clusters, drones);
+    }
+
+    // 0.5. FPV Camera Telemetry & Dynamic Static Noise (when tracking Drone 1..9)
     int activeCam = fleetCam.GetActiveCameraMode();
     if (activeCam >= 1 && activeCam <= 9) {
         int droneIdx = activeCam - 1;
@@ -532,7 +555,15 @@ void FleetHUD::Draw2DHUD(const TelemetryContext& telemetry,
         DrawRectangleLines(bannerX + 2, bannerY + 2, bannerW - 4, bannerH - 4, Fade(GOLD, 0.35f));
 
         std::string camTitle = "CAMERA: " + fleetCam.GetActiveCameraModeName();
+        if (visionMode == VisionMode::FLIR_THERMAL) {
+            camTitle += " [FLIR THERMAL LWIR]";
+        } else if (visionMode == VisionMode::NVG_GREEN) {
+            camTitle += " [NVG GEN-3 GREEN]";
+        }
+
         Color modeColor = (fleetCam.GetActiveCameraMode() == 0) ? SKYBLUE : ((fleetCam.GetActiveCameraMode() <= 2) ? SKYBLUE : ((fleetCam.GetActiveCameraMode() >= 8) ? LIME : ORANGE));
+        if (visionMode == VisionMode::FLIR_THERMAL) modeColor = Color{ 255, 170, 40, 255 };
+        else if (visionMode == VisionMode::NVG_GREEN) modeColor = Color{ 80, 255, 120, 255 };
         
         float titleW = fontLoaded ? MeasureTextEx(customFont, camTitle.c_str(), 14.0f, 1.0f).x : (float)MeasureText(camTitle.c_str(), 14);
         DrawCustomText(camTitle.c_str(), bannerX + (bannerW - titleW) / 2.0f, bannerY + 6, 14.0f, modeColor);
@@ -542,7 +573,7 @@ void FleetHUD::Draw2DHUD(const TelemetryContext& telemetry,
         float timeW = fontLoaded ? MeasureTextEx(customFont, timeStr, 12.0f, 1.0f).x : (float)MeasureText(timeStr, 12);
         DrawCustomText(timeStr, bannerX + (bannerW - timeW) / 2.0f, bannerY + 26, 12.0f, timeCol);
 
-        const char* hintMsg = "[TAB] View | [M] Map | [I] Telemetry | [F1-F8] Panels";
+        const char* hintMsg = "[TAB] View | [T] FLIR IR | [N] NVG | [M] Map | [I] Telemetry | [F1-F8] Panels";
         float hintW = fontLoaded ? MeasureTextEx(customFont, hintMsg, 11.0f, 1.0f).x : (float)MeasureText(hintMsg, 11);
         DrawCustomText(hintMsg, bannerX + (bannerW - hintW) / 2.0f, bannerY + 44, 11.0f, GOLD);
     }
@@ -612,5 +643,144 @@ void FleetHUD::Draw2DHUD(const TelemetryContext& telemetry,
     }
 }
 
+void FleetHUD::DrawFLIROverlay2D(const Camera3D& cam, const std::vector<EnemyCluster>& clusters, const std::vector<std::unique_ptr<Drone>>& drones) const {
+    int screenWidth = GetScreenWidth();
+    int screenHeight = GetScreenHeight();
+
+    Color opticColor = (visionMode == VisionMode::FLIR_THERMAL) ? Color{ 255, 150, 40, 255 } : Color{ 60, 255, 100, 255 };
+    Color dimOpticColor = Fade(opticColor, 0.45f);
+
+    // 1. Dynamic Raster Scanlines
+    float scanSpeed = 50.0f;
+    float scanSpacing = 4.0f;
+    float scanOffset = fmodf(GetTime() * scanSpeed, scanSpacing);
+    Color scanlineCol = (visionMode == VisionMode::FLIR_THERMAL) 
+        ? Fade(Color{ 100, 200, 255, 255 }, 0.045f) 
+        : Fade(Color{ 80, 255, 120, 255 }, 0.055f);
+
+    for (float y = scanOffset; y < (float)screenHeight; y += scanSpacing) {
+        DrawLine(0, (int)y, screenWidth, (int)y, scanlineCol);
+    }
+
+    // 2. Optical Framing & Sensor Vignette
+    DrawRectangleLinesEx(Rectangle{ 0, 0, (float)screenWidth, (float)screenHeight }, 10.0f, Fade(BLACK, 0.50f));
+    DrawRectangleLines(14, 14, screenWidth - 28, screenHeight - 28, Fade(opticColor, 0.25f));
+
+    // Corner Tactical Mils Brackets
+    int cLen = 45;
+    int cPad = 22;
+    // Top-Left
+    DrawLine(cPad, cPad, cPad + cLen, cPad, opticColor);
+    DrawLine(cPad, cPad, cPad, cPad + cLen, opticColor);
+    // Top-Right
+    DrawLine(screenWidth - cPad, cPad, screenWidth - cPad - cLen, cPad, opticColor);
+    DrawLine(screenWidth - cPad, cPad, screenWidth - cPad, cPad + cLen, opticColor);
+    // Bottom-Left
+    DrawLine(cPad, screenHeight - cPad, cPad + cLen, screenHeight - cPad, opticColor);
+    DrawLine(cPad, screenHeight - cPad, cPad, screenHeight - cPad - cLen, opticColor);
+    // Bottom-Right
+    DrawLine(screenWidth - cPad, screenHeight - cPad, screenWidth - cPad - cLen, screenHeight - cPad, opticColor);
+    DrawLine(screenWidth - cPad, screenHeight - cPad, screenWidth - cPad, screenHeight - cPad - cLen, opticColor);
+
+    // 3. Central Military FLIR Reticle / Crosshair & Pitch Ladder
+    int cx = screenWidth / 2;
+    int cy = screenHeight / 2;
+
+    // Crosshair with center aperture
+    DrawLine(cx - 50, cy, cx - 12, cy, opticColor);
+    DrawLine(cx + 12, cy, cx + 50, cy, opticColor);
+    DrawLine(cx, cy - 50, cx, cy - 12, opticColor);
+    DrawLine(cx, cy + 12, cx, cy + 50, opticColor);
+
+    // Mil-Dot Range Circles
+    DrawCircleLines(cx, cy, 28, dimOpticColor);
+    DrawCircleLines(cx, cy, 65, Fade(opticColor, 0.25f));
+
+    // Azimuth & Elevation Tick Marks
+    DrawLine(cx, cy - 65, cx, cy - 73, opticColor);
+    DrawLine(cx, cy + 65, cx, cy + 73, opticColor);
+    DrawLine(cx - 65, cy, cx - 73, cy, opticColor);
+    DrawLine(cx + 65, cy, cx + 73, cy, opticColor);
+
+    // Horizon / Elevation Graduated Ladder
+    for (int p = -2; p <= 2; p++) {
+        if (p == 0) continue;
+        int py = cy + p * 35;
+        int tickW = (abs(p) == 1) ? 22 : 15;
+        DrawLine(cx - tickW, py, cx - 6, py, dimOpticColor);
+        DrawLine(cx + 6, py, cx + tickW, py, dimOpticColor);
+        DrawText(TextFormat("%+d°", -p * 5), cx + tickW + 6, py - 4, 9, dimOpticColor);
+    }
+
+    // 4. Optical Sensor OSD Status Banner (Center Top)
+    const char* modeHeader = (visionMode == VisionMode::FLIR_THERMAL)
+        ? "FLIR THERMAL 8-12um LWIR // WHITE-HOT PALETTE"
+        : "NVG GEN-3 INTENSIFIER // GREEN PHOSPHOR";
+    const char* sensorSub = (visionMode == VisionMode::FLIR_THERMAL)
+        ? "NUC: AUTO-CALIB [OK] | SENSOR: UNCOOLED MICROBOLOMETER | POLARITY: WHT-HOT | GAIN: +14.2dB"
+        : "IR ILLUMINATOR: ACTIVE | AGC GAIN: HIGH | PHOSPHOR: P43 GREEN | GAIN: +22.0dB";
+
+    int headW = fontLoaded ? (int)MeasureTextEx(customFont, modeHeader, 13.0f, 1.0f).x : MeasureText(modeHeader, 13);
+    int subW = fontLoaded ? (int)MeasureTextEx(customFont, sensorSub, 10.0f, 1.0f).x : MeasureText(sensorSub, 10);
+    int boxW = std::max(headW, subW) + 30;
+
+    DrawRectangle(screenWidth / 2 - boxW / 2, 86, boxW, 36, Color{ 4, 10, 18, 220 });
+    DrawRectangleLines(screenWidth / 2 - boxW / 2, 86, boxW, 36, opticColor);
+    DrawCustomText(modeHeader, (float)(screenWidth / 2 - headW / 2), 90.0f, 13.0f, opticColor);
+    DrawCustomText(sensorSub, (float)(screenWidth / 2 - subW / 2), 107.0f, 10.0f, RAYWHITE);
+
+    // 5. Target Heat Acquisition Bounding Boxes & Temperature Telemetry
+    int lockedTargets = 0;
+    for (const auto& c : clusters) {
+        if (c.status == ClusterStatus::CLEARED) continue;
+        for (const auto& e : c.enemies) {
+            if (!e.isAlive) continue;
+
+            Vector2 scrPos = GetWorldToScreen(e.position, cam);
+            float distToCam = Vector3Distance(cam.position, e.position);
+
+            if (scrPos.x > 30 && scrPos.x < screenWidth - 30 && scrPos.y > 30 && scrPos.y < screenHeight - 30 && distToCam > 1.0f && distToCam < 500.0f) {
+                lockedTargets++;
+                int boxSize = std::clamp((int)(380.0f / distToCam * 4.0f), 18, 55);
+                int bx = (int)scrPos.x - boxSize / 2;
+                int by = (int)scrPos.y - boxSize / 2;
+
+                Color tgtBorderCol = e.isArmed ? Color{ 255, 60, 40, 255 } : Color{ 255, 170, 30, 255 };
+                if (visionMode == VisionMode::NVG_GREEN) {
+                    tgtBorderCol = e.isArmed ? Color{ 255, 100, 100, 255 } : Color{ 80, 255, 120, 255 };
+                }
+
+                // Precision corner brackets on target
+                int bLen = std::max(4, boxSize / 3);
+                DrawLine(bx, by, bx + bLen, by, tgtBorderCol);
+                DrawLine(bx, by, bx, by + bLen, tgtBorderCol);
+                DrawLine(bx + boxSize, by, bx + boxSize - bLen, by, tgtBorderCol);
+                DrawLine(bx + boxSize, by, bx + boxSize, by + bLen, tgtBorderCol);
+                DrawLine(bx, by + boxSize, bx + bLen, by + boxSize, tgtBorderCol);
+                DrawLine(bx, by + boxSize, bx, by + boxSize - bLen, tgtBorderCol);
+                DrawLine(bx + boxSize, by + boxSize, bx + boxSize - bLen, by + boxSize, tgtBorderCol);
+                DrawLine(bx + boxSize, by + boxSize, bx + boxSize, by + boxSize - bLen, tgtBorderCol);
+
+                // Center diamond lock
+                DrawCircleLines((int)scrPos.x, (int)scrPos.y, 3, tgtBorderCol);
+
+                // Simulated Target Temperature Calculation
+                float baseTemp = e.isArmed ? 342.0f : 88.0f;
+                if (e.panicTimer > 0.0f) baseTemp += 115.0f;
+                float simTemp = baseTemp + sinf((float)e.id * 2.3f + GetTime() * 3.0f) * 12.0f;
+
+                const char* heatStatus = e.isArmed ? "HEAT SPIKE" : "AMBIENT";
+                if (e.panicTimer > 0.0f) heatStatus = "OVERHEAT";
+
+                const char* tempStr = TextFormat("TGT #%d-E%d [+%.1f°C %s]", c.id, e.id, simTemp, heatStatus);
+                const char* distStr = TextFormat("RNG: %.0fm // %s", distToCam, e.isArmed ? "HOSTILE" : "LOGISTICS");
+
+                DrawCustomText(tempStr, (float)(bx - 20), (float)(by - 14), 10.0f, tgtBorderCol);
+                DrawCustomText(distStr, (float)(bx - 10), (float)(by + boxSize + 3), 9.0f, RAYWHITE);
+            }
+        }
+    }
+}
 
 } // namespace DroneFleet
+

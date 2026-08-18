@@ -73,29 +73,77 @@ void HangarBase::UpdateBaseRefill(Drone& drone, FleetContext& ctx, float dt) {
     }
 }
 
-void HangarBase::Draw3D(const std::vector<std::unique_ptr<Drone>>& drones) const {
+void HangarBase::Draw3D(const std::vector<std::unique_ptr<Drone>>& drones, VisionMode visionMode) const {
     DrawGrid(100, 10.0f);
 
-    DrawCylinder(position, radius, radius, 0.2f, 32, Color{ 0, 180, 255, 40 });
-    DrawCircle3D(position, radius, Vector3{ 1, 0, 0 }, 90.0f, Color{ 0, 255, 255, 200 });
+    if (visionMode == VisionMode::FLIR_THERMAL) {
+        DrawCylinder(position, radius, radius, 0.2f, 32, Color{ 15, 30, 45, 40 });
+        DrawCircle3D(position, radius, Vector3{ 1, 0, 0 }, 90.0f, Color{ 60, 140, 180, 160 });
 
-    Vector3 hPos = Vector3{ 0.0f, 5.0f, 0.0f };
-    DrawCubeWires(hPos, 36.0f, 10.0f, 44.0f, SKYBLUE);
-    DrawCube(Vector3{ 0.0f, 10.1f, 0.0f }, 36.5f, 0.4f, 44.5f, Color{ 20, 50, 80, 220 });
+        Vector3 hPos = Vector3{ 0.0f, 5.0f, 0.0f };
+        DrawCubeWires(hPos, 36.0f, 10.0f, 44.0f, Color{ 80, 130, 170, 180 });
+        DrawCube(Vector3{ 0.0f, 10.1f, 0.0f }, 36.5f, 0.4f, 44.5f, Color{ 18, 26, 38, 230 });
 
-    float pX[4] = { -18.0f, 18.0f, -18.0f, 18.0f };
-    float pZ[4] = { -22.0f, -22.0f, 22.0f, 22.0f };
-    for (int i = 0; i < 4; i++) {
-        DrawCylinder(Vector3{ pX[i], 2.5f, pZ[i] }, 0.8f, 0.8f, 5.0f, 8, DARKGRAY);
-    }
+        float pX[4] = { -18.0f, 18.0f, -18.0f, 18.0f };
+        float pZ[4] = { -22.0f, -22.0f, 22.0f, 22.0f };
+        for (int i = 0; i < 4; i++) {
+            DrawCylinder(Vector3{ pX[i], 2.5f, pZ[i] }, 0.8f, 0.8f, 5.0f, 8, Color{ 30, 40, 50, 255 });
+        }
 
-    DrawCylinder(Vector3{ -20.0f, 3.0f, -10.0f }, 2.5f, 2.5f, 6.0f, 16, ORANGE);
-    DrawCylinder(Vector3{ -20.0f, 3.0f, 10.0f }, 2.5f, 2.5f, 6.0f, 16, YELLOW);
+        // Fuel and Ammo depots (warm thermal mass)
+        DrawCylinder(Vector3{ -20.0f, 3.0f, -10.0f }, 2.5f, 2.5f, 6.0f, 16, Color{ 120, 70, 20, 255 });
+        DrawCylinder(Vector3{ -20.0f, 3.0f, 10.0f }, 2.5f, 2.5f, 6.0f, 16, Color{ 100, 80, 25, 255 });
 
-    for (const auto& d : drones) {
-        Color padColor = (d->role == DroneRole::RECON) ? SKYBLUE : ((d->role == DroneRole::TASK_FORCE) ? ORANGE : LIME);
-        DrawCircle3D(d->baseDockPos, 2.2f, Vector3{ 1, 0, 0 }, 90.0f, padColor);
-        DrawCircle3D(d->baseDockPos, 1.1f, Vector3{ 1, 0, 0 }, 90.0f, RAYWHITE);
+        for (const auto& d : drones) {
+            bool isDocked = (d->state == DroneState::IDLE_AT_BASE || d->state == DroneState::RETURNING_TO_BASE);
+            Color padColor = isDocked ? Color{ 255, 170, 40, 220 } : Color{ 50, 90, 120, 140 };
+            DrawCircle3D(d->baseDockPos, 2.2f, Vector3{ 1, 0, 0 }, 90.0f, padColor);
+            DrawCircle3D(d->baseDockPos, 1.1f, Vector3{ 1, 0, 0 }, 90.0f, isDocked ? Color{ 255, 240, 180, 240 } : Color{ 80, 130, 160, 120 });
+        }
+    } else if (visionMode == VisionMode::NVG_GREEN) {
+        DrawCylinder(position, radius, radius, 0.2f, 32, Color{ 10, 40, 20, 40 });
+        DrawCircle3D(position, radius, Vector3{ 1, 0, 0 }, 90.0f, Color{ 50, 220, 90, 180 });
+
+        Vector3 hPos = Vector3{ 0.0f, 5.0f, 0.0f };
+        DrawCubeWires(hPos, 36.0f, 10.0f, 44.0f, Color{ 60, 200, 100, 180 });
+        DrawCube(Vector3{ 0.0f, 10.1f, 0.0f }, 36.5f, 0.4f, 44.5f, Color{ 12, 38, 20, 230 });
+
+        float pX[4] = { -18.0f, 18.0f, -18.0f, 18.0f };
+        float pZ[4] = { -22.0f, -22.0f, 22.0f, 22.0f };
+        for (int i = 0; i < 4; i++) {
+            DrawCylinder(Vector3{ pX[i], 2.5f, pZ[i] }, 0.8f, 0.8f, 5.0f, 8, Color{ 20, 50, 30, 255 });
+        }
+
+        DrawCylinder(Vector3{ -20.0f, 3.0f, -10.0f }, 2.5f, 2.5f, 6.0f, 16, Color{ 50, 140, 60, 255 });
+        DrawCylinder(Vector3{ -20.0f, 3.0f, 10.0f }, 2.5f, 2.5f, 6.0f, 16, Color{ 70, 160, 70, 255 });
+
+        for (const auto& d : drones) {
+            Color padColor = (d->role == DroneRole::RECON) ? Color{ 80, 255, 140, 200 } : ((d->role == DroneRole::TASK_FORCE) ? Color{ 200, 255, 80, 200 } : Color{ 100, 255, 100, 200 });
+            DrawCircle3D(d->baseDockPos, 2.2f, Vector3{ 1, 0, 0 }, 90.0f, padColor);
+            DrawCircle3D(d->baseDockPos, 1.1f, Vector3{ 1, 0, 0 }, 90.0f, Color{ 180, 255, 180, 220 });
+        }
+    } else {
+        DrawCylinder(position, radius, radius, 0.2f, 32, Color{ 0, 180, 255, 40 });
+        DrawCircle3D(position, radius, Vector3{ 1, 0, 0 }, 90.0f, Color{ 0, 255, 255, 200 });
+
+        Vector3 hPos = Vector3{ 0.0f, 5.0f, 0.0f };
+        DrawCubeWires(hPos, 36.0f, 10.0f, 44.0f, SKYBLUE);
+        DrawCube(Vector3{ 0.0f, 10.1f, 0.0f }, 36.5f, 0.4f, 44.5f, Color{ 20, 50, 80, 220 });
+
+        float pX[4] = { -18.0f, 18.0f, -18.0f, 18.0f };
+        float pZ[4] = { -22.0f, -22.0f, 22.0f, 22.0f };
+        for (int i = 0; i < 4; i++) {
+            DrawCylinder(Vector3{ pX[i], 2.5f, pZ[i] }, 0.8f, 0.8f, 5.0f, 8, DARKGRAY);
+        }
+
+        DrawCylinder(Vector3{ -20.0f, 3.0f, -10.0f }, 2.5f, 2.5f, 6.0f, 16, ORANGE);
+        DrawCylinder(Vector3{ -20.0f, 3.0f, 10.0f }, 2.5f, 2.5f, 6.0f, 16, YELLOW);
+
+        for (const auto& d : drones) {
+            Color padColor = (d->role == DroneRole::RECON) ? SKYBLUE : ((d->role == DroneRole::TASK_FORCE) ? ORANGE : LIME);
+            DrawCircle3D(d->baseDockPos, 2.2f, Vector3{ 1, 0, 0 }, 90.0f, padColor);
+            DrawCircle3D(d->baseDockPos, 1.1f, Vector3{ 1, 0, 0 }, 90.0f, RAYWHITE);
+        }
     }
 }
 

@@ -120,19 +120,40 @@ void Drone::ApplyFlankingAndSeparation(FleetContext& ctx, float dt) {
     }
 }
 
-void Drone::Draw3D() const {
+void Drone::Draw3D(VisionMode visionMode) const {
     if (isDestroyed) {
-        DrawCube(position, 1.8f, 0.4f, 1.8f, DARKGRAY);
-        DrawCubeWires(position, 1.85f, 0.45f, 1.85f, BLACK);
-        DrawCircle3D(position, 1.8f, Vector3{ 1, 0, 0 }, 90.0f, Fade(RED, 0.6f));
+        if (visionMode == VisionMode::FLIR_THERMAL) {
+            DrawCube(position, 1.8f, 0.4f, 1.8f, Color{ 25, 28, 35, 255 });
+            DrawCubeWires(position, 1.85f, 0.45f, 1.85f, Color{ 70, 80, 95, 255 });
+            DrawCircle3D(position, 1.8f, Vector3{ 1, 0, 0 }, 90.0f, Fade(Color{ 180, 40, 20, 255 }, 0.5f));
+        } else if (visionMode == VisionMode::NVG_GREEN) {
+            DrawCube(position, 1.8f, 0.4f, 1.8f, Color{ 10, 35, 15, 255 });
+            DrawCubeWires(position, 1.85f, 0.45f, 1.85f, Color{ 30, 90, 40, 255 });
+            DrawCircle3D(position, 1.8f, Vector3{ 1, 0, 0 }, 90.0f, Fade(GREEN, 0.4f));
+        } else {
+            DrawCube(position, 1.8f, 0.4f, 1.8f, DARKGRAY);
+            DrawCubeWires(position, 1.85f, 0.45f, 1.85f, BLACK);
+            DrawCircle3D(position, 1.8f, Vector3{ 1, 0, 0 }, 90.0f, Fade(RED, 0.6f));
+        }
         return;
     }
 
     Color bodyColor = WHITE;
-    switch (role) {
-        case DroneRole::RECON:      bodyColor = SKYBLUE; break;
-        case DroneRole::TASK_FORCE: bodyColor = ORANGE; break;
-        case DroneRole::SUPPORT:    bodyColor = LIME; break;
+    Color wireColor = DARKGRAY;
+
+    if (visionMode == VisionMode::FLIR_THERMAL) {
+        // Cold dark carbon chassis with glowing cool thermal edges
+        bodyColor = Color{ 48, 56, 68, 255 };
+        wireColor = Color{ 180, 220, 245, 255 };
+    } else if (visionMode == VisionMode::NVG_GREEN) {
+        bodyColor = Color{ 15, 90, 30, 255 };
+        wireColor = Color{ 80, 255, 110, 255 };
+    } else {
+        switch (role) {
+            case DroneRole::RECON:      bodyColor = SKYBLUE; break;
+            case DroneRole::TASK_FORCE: bodyColor = ORANGE; break;
+            case DroneRole::SUPPORT:    bodyColor = LIME; break;
+        }
     }
 
     rlPushMatrix();
@@ -141,7 +162,7 @@ void Drone::Draw3D() const {
     rlRotatef(pitch, 1.0f, 0.0f, 0.0f);
 
     DrawCube(Vector3{ 0, 0, 0 }, 1.8f, 0.6f, 1.8f, bodyColor);
-    DrawCubeWires(Vector3{ 0, 0, 0 }, 1.85f, 0.65f, 1.85f, DARKGRAY);
+    DrawCubeWires(Vector3{ 0, 0, 0 }, 1.85f, 0.65f, 1.85f, wireColor);
 
     float rOffset = 1.3f;
     Vector3 rPositions[4] = {
@@ -151,20 +172,56 @@ void Drone::Draw3D() const {
         Vector3{ -rOffset, 0.3f, -rOffset }
     };
 
-    for (int i = 0; i < 4; i++) {
-        DrawCylinder(rPositions[i], 0.6f, 0.6f, 0.1f, 8, DARKGRAY);
+    if (visionMode == VisionMode::FLIR_THERMAL) {
+        // FLIR: Motor hubs are active white-hot heat emitters!
+        for (int i = 0; i < 4; i++) {
+            DrawCylinder(rPositions[i], 0.6f, 0.6f, 0.12f, 8, Color{ 255, 250, 225, 255 });
+            DrawSphere(rPositions[i], 0.28f, Color{ 255, 255, 240, 255 });
+        }
+    } else if (visionMode == VisionMode::NVG_GREEN) {
+        for (int i = 0; i < 4; i++) {
+            DrawCylinder(rPositions[i], 0.6f, 0.6f, 0.1f, 8, Color{ 40, 160, 60, 255 });
+            DrawSphere(rPositions[i], 0.22f, Color{ 120, 255, 140, 255 });
+        }
+    } else {
+        for (int i = 0; i < 4; i++) {
+            DrawCylinder(rPositions[i], 0.6f, 0.6f, 0.1f, 8, DARKGRAY);
+        }
     }
 
     rlPopMatrix();
 
+    // Engine exhaust heat aura in FLIR mode
+    if (visionMode == VisionMode::FLIR_THERMAL) {
+        float pulse = 0.5f + 0.3f * sinf(GetTime() * 10.0f + (float)id);
+        DrawCircle3D(Vector3{ position.x, position.y + 0.35f, position.z }, 2.2f, Vector3{ 1, 0, 0 }, 90.0f, Fade(Color{ 255, 130, 20, 255 }, pulse * 0.45f));
+    }
+
     if (isFiringLaser) {
-        DrawLine3D(position, laserTargetPos, RED);
-        DrawSphere(laserTargetPos, 0.5f, RED);
+        if (visionMode == VisionMode::FLIR_THERMAL) {
+            DrawLine3D(position, laserTargetPos, Color{ 255, 255, 255, 255 });
+            DrawSphere(laserTargetPos, 0.6f, Color{ 255, 240, 180, 255 });
+            DrawCircle3D(laserTargetPos, 1.4f, Vector3{ 1, 0, 0 }, 90.0f, Fade(Color{ 255, 120, 0, 255 }, 0.6f));
+        } else if (visionMode == VisionMode::NVG_GREEN) {
+            DrawLine3D(position, laserTargetPos, Color{ 120, 255, 140, 255 });
+            DrawSphere(laserTargetPos, 0.5f, Color{ 80, 255, 100, 255 });
+        } else {
+            DrawLine3D(position, laserTargetPos, RED);
+            DrawSphere(laserTargetPos, 0.5f, RED);
+        }
     }
 
     if (isResupplyBeamActive) {
-        DrawLine3D(position, resupplyTargetPos, GREEN);
-        DrawSphere(resupplyTargetPos, 0.7f, LIME);
+        if (visionMode == VisionMode::FLIR_THERMAL) {
+            DrawLine3D(position, resupplyTargetPos, Color{ 230, 255, 255, 255 });
+            DrawSphere(resupplyTargetPos, 0.8f, Color{ 180, 240, 255, 255 });
+        } else if (visionMode == VisionMode::NVG_GREEN) {
+            DrawLine3D(position, resupplyTargetPos, Color{ 80, 255, 120, 255 });
+            DrawSphere(resupplyTargetPos, 0.7f, Color{ 120, 255, 160, 255 });
+        } else {
+            DrawLine3D(position, resupplyTargetPos, GREEN);
+            DrawSphere(resupplyTargetPos, 0.7f, LIME);
+        }
     }
 }
 
@@ -345,12 +402,22 @@ void ReconDrone::Update(FleetContext& ctx, float dt) {
     ApplyFlankingAndSeparation(ctx, dt);
 }
 
-void ReconDrone::Draw3D() const {
-    Drone::Draw3D();
+void ReconDrone::Draw3D(VisionMode visionMode) const {
+    Drone::Draw3D(visionMode);
     if (!isDestroyed && state != DroneState::IDLE_AT_BASE) {
-        DrawCircle3D(position, 140.0f, Vector3{ 1, 0, 0 }, 90.0f, Fade(SKYBLUE, 0.35f));
-        DrawCircle3D(position, 140.5f, Vector3{ 1, 0, 0 }, 90.0f, SKYBLUE);
-        DrawCircle3D(position, 70.0f, Vector3{ 1, 0, 0 }, 90.0f, Fade(GOLD, 0.40f));
+        if (visionMode == VisionMode::FLIR_THERMAL) {
+            DrawCircle3D(position, 140.0f, Vector3{ 1, 0, 0 }, 90.0f, Fade(Color{ 100, 200, 255, 255 }, 0.25f));
+            DrawCircle3D(position, 140.5f, Vector3{ 1, 0, 0 }, 90.0f, Color{ 140, 220, 255, 200 });
+            DrawCircle3D(position, 70.0f, Vector3{ 1, 0, 0 }, 90.0f, Fade(Color{ 255, 180, 50, 255 }, 0.30f));
+        } else if (visionMode == VisionMode::NVG_GREEN) {
+            DrawCircle3D(position, 140.0f, Vector3{ 1, 0, 0 }, 90.0f, Fade(Color{ 50, 255, 100, 255 }, 0.25f));
+            DrawCircle3D(position, 140.5f, Vector3{ 1, 0, 0 }, 90.0f, Color{ 80, 255, 120, 200 });
+            DrawCircle3D(position, 70.0f, Vector3{ 1, 0, 0 }, 90.0f, Fade(Color{ 180, 255, 80, 255 }, 0.30f));
+        } else {
+            DrawCircle3D(position, 140.0f, Vector3{ 1, 0, 0 }, 90.0f, Fade(SKYBLUE, 0.35f));
+            DrawCircle3D(position, 140.5f, Vector3{ 1, 0, 0 }, 90.0f, SKYBLUE);
+            DrawCircle3D(position, 70.0f, Vector3{ 1, 0, 0 }, 90.0f, Fade(GOLD, 0.40f));
+        }
     }
 }
 
@@ -640,8 +707,8 @@ void TaskForceDrone::Update(FleetContext& ctx, float dt) {
     ApplyFlankingAndSeparation(ctx, dt);
 }
 
-void TaskForceDrone::Draw3D() const {
-    Drone::Draw3D();
+void TaskForceDrone::Draw3D(VisionMode visionMode) const {
+    Drone::Draw3D(visionMode);
 }
 
 // ==========================================
@@ -966,10 +1033,16 @@ void SupportDrone::Update(FleetContext& ctx, float dt) {
     ApplyFlankingAndSeparation(ctx, dt);
 }
 
-void SupportDrone::Draw3D() const {
-    Drone::Draw3D();
+void SupportDrone::Draw3D(VisionMode visionMode) const {
+    Drone::Draw3D(visionMode);
     if (state == DroneState::LOITERING_IN_AREA) {
-        DrawCircle3D(position, 12.0f, Vector3{ 1, 0, 0 }, 90.0f, Fade(LIME, 0.4f));
+        if (visionMode == VisionMode::FLIR_THERMAL) {
+            DrawCircle3D(position, 12.0f, Vector3{ 1, 0, 0 }, 90.0f, Fade(Color{ 100, 240, 255, 255 }, 0.4f));
+        } else if (visionMode == VisionMode::NVG_GREEN) {
+            DrawCircle3D(position, 12.0f, Vector3{ 1, 0, 0 }, 90.0f, Fade(Color{ 80, 255, 120, 255 }, 0.4f));
+        } else {
+            DrawCircle3D(position, 12.0f, Vector3{ 1, 0, 0 }, 90.0f, Fade(LIME, 0.4f));
+        }
     }
 }
 

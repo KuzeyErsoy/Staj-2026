@@ -36,6 +36,12 @@ public:
     void ToggleAllPanels() { fleetHUD.ToggleAllPanels(); }
     void SelectInspectorDrone(int id) { fleetHUD.SelectInspectorDrone(id); }
 
+    // FLIR / Night Vision Modes
+    void ToggleThermalFLIR();
+    void ToggleNightVision();
+    void SetVisionMode(DroneFleet::VisionMode mode) { fleetHUD.SetVisionMode(mode); }
+    DroneFleet::VisionMode GetVisionMode() const { return fleetHUD.GetVisionMode(); }
+
     // Fleet Accessors
     const DroneFleet::HangarBase& GetHangarBase() const { return hangarBase; }
     const std::vector<std::unique_ptr<DroneFleet::Drone>>& GetDrones() const { return drones; }

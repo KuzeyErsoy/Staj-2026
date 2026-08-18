@@ -186,12 +186,18 @@ void MissileSystem::Update(ClusterManager& clusterMgr, TelemetryContext& telemet
     }), particles.end());
 }
 
-void MissileSystem::Draw3D() const {
+void MissileSystem::Draw3D(VisionMode visionMode) const {
     // 1. Draw particles
     for (const auto& p : particles) {
         if (!p.isAlive) continue;
         float alpha = 1.0f - (p.life / p.maxLife);
-        DrawSphere(p.position, p.size * alpha, Fade(p.color, alpha * 0.8f));
+        Color pCol = p.color;
+        if (visionMode == VisionMode::FLIR_THERMAL) {
+            pCol = (alpha > 0.5f) ? Color{ 255, 255, 220, 255 } : Color{ 255, 120, 20, 255 };
+        } else if (visionMode == VisionMode::NVG_GREEN) {
+            pCol = (alpha > 0.5f) ? Color{ 200, 255, 200, 255 } : Color{ 50, 220, 80, 255 };
+        }
+        DrawSphere(p.position, p.size * alpha, Fade(pCol, alpha * 0.85f));
     }
 
     // 2. Draw missiles
@@ -202,9 +208,19 @@ void MissileSystem::Draw3D() const {
         Vector3 forward = Vector3Normalize(m.velocity);
         Vector3 tailPos = Vector3Subtract(m.position, Vector3Scale(forward, 0.8f));
 
-        DrawLine3D(tailPos, m.position, ORANGE);
-        DrawSphere(m.position, 0.25f, RED);
-        DrawSphere(tailPos, 0.15f, YELLOW);
+        if (visionMode == VisionMode::FLIR_THERMAL) {
+            DrawLine3D(tailPos, m.position, Color{ 255, 255, 255, 255 });
+            DrawSphere(m.position, 0.30f, Color{ 255, 240, 200, 255 });
+            DrawSphere(tailPos, 0.22f, Color{ 255, 130, 20, 255 });
+        } else if (visionMode == VisionMode::NVG_GREEN) {
+            DrawLine3D(tailPos, m.position, Color{ 140, 255, 160, 255 });
+            DrawSphere(m.position, 0.25f, Color{ 220, 255, 220, 255 });
+            DrawSphere(tailPos, 0.15f, Color{ 80, 255, 100, 255 });
+        } else {
+            DrawLine3D(tailPos, m.position, ORANGE);
+            DrawSphere(m.position, 0.25f, RED);
+            DrawSphere(tailPos, 0.15f, YELLOW);
+        }
     }
 }
 

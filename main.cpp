@@ -360,6 +360,11 @@ int main() {
       fleetManager.UpdateFleetCamera(cameraController.camera, dt);
       fleetManager.Update(dt);
 
+      if (IsKeyPressed(KEY_T))
+        fleetManager.ToggleThermalFLIR();
+      if (IsKeyPressed(KEY_N))
+        fleetManager.ToggleNightVision();
+
       if (IsKeyPressed(KEY_M))
         fleetManager.ToggleFullscreenMap();
       if (IsKeyPressed(KEY_I))
@@ -385,7 +390,17 @@ int main() {
 
     // --- DRAW LOGIC BY STATE ---
     BeginDrawing();
-    ClearBackground(RAYWHITE);
+    if (currentState == STATE_FLEET_SIM) {
+      if (fleetManager.GetVisionMode() == DroneFleet::VisionMode::FLIR_THERMAL) {
+        ClearBackground(Color{ 4, 8, 14, 255 });
+      } else if (fleetManager.GetVisionMode() == DroneFleet::VisionMode::NVG_GREEN) {
+        ClearBackground(Color{ 2, 14, 6, 255 });
+      } else {
+        ClearBackground(Color{ 10, 16, 26, 255 });
+      }
+    } else {
+      ClearBackground(RAYWHITE);
+    }
 
     // 3D Scene Pass (Rendered in all playing/menu/pause states)
     BeginMode3D(cameraController.GetCamera());
@@ -444,8 +459,8 @@ int main() {
 
       int fleetX =
           GetScreenWidth() / 2 -
-          MeasureText("[ PRESS 'F7' FOR 5-DRONE FLEET LOGISTICS SIM ]", 22) / 2;
-      DrawText("[ PRESS 'F7' FOR 5-DRONE FLEET LOGISTICS SIM ]", fleetX, 410,
+          MeasureText("[ PRESS 'F7' OR 'O' FOR 9-DRONE FLEET SIMULATION ]", 22) / 2;
+      DrawText("[ PRESS 'F7' OR 'O' FOR 9-DRONE FLEET SIMULATION ]", fleetX, 410,
                22, SKYBLUE);
 
       if (SaveSystem::SaveFileExists("savegame.dat")) {
