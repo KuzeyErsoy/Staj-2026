@@ -62,6 +62,8 @@ public:
 protected:
     void UpdateMovementPhysics(float targetSpeed, float dt);
     void ApplyFlankingAndSeparation(FleetContext& ctx, float dt);
+    void DrawNavigationLEDs(VisionMode visionMode) const;
+    void DrawGroundSpotlight(VisionMode visionMode) const;
 };
 
 // --- RECON DRONE (SCOUT / HIGH ALTITUDE SWEEP) ---

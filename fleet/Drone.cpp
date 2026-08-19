@@ -191,6 +191,12 @@ void Drone::Draw3D(VisionMode visionMode) const {
 
     rlPopMatrix();
 
+    // 1. Strobe Navigation LEDs & Anti-Collision Beacons
+    DrawNavigationLEDs(visionMode);
+
+    // 2. Dynamic Ground Spotlight & Volumetric Downlight
+    DrawGroundSpotlight(visionMode);
+
     // Engine exhaust heat aura in FLIR mode
     if (visionMode == VisionMode::FLIR_THERMAL) {
         float pulse = 0.5f + 0.3f * sinf(GetTime() * 10.0f + (float)id);
@@ -221,6 +227,146 @@ void Drone::Draw3D(VisionMode visionMode) const {
         } else {
             DrawLine3D(position, resupplyTargetPos, GREEN);
             DrawSphere(resupplyTargetPos, 0.7f, LIME);
+        }
+    }
+}
+
+void Drone::DrawNavigationLEDs(VisionMode visionMode) const {
+    if (isDestroyed) return;
+
+    float timeSec = (float)GetTime();
+    float timeOffset = (float)id * 0.28f;
+
+    // Military aviation double-flash strobe pattern
+    bool isEngagedCombat = (role == DroneRole::TASK_FORCE && (state == DroneState::ENGAGING || isFiringLaser));
+    bool isResupplying = (role == DroneRole::SUPPORT && state == DroneState::RESUPPLYING_IN_AIR);
+
+    bool strobeBurst = false;
+    if (isEngagedCombat) {
+        // Rapid combat flashing strobe (6 Hz)
+        strobeBurst = (fmodf(timeSec * 6.0f + (float)id * 0.5f, 1.0f) < 0.45f);
+    } else if (isResupplying) {
+        // Fast dual rescue strobe
+        strobeBurst = (fmodf(timeSec * 4.0f, 1.0f) < 0.4f);
+    } else {
+        // Standard double-flash rhythm
+        float cycle = fmodf(timeSec + timeOffset, 1.15f);
+        strobeBurst = (cycle < 0.08f) || (cycle > 0.16f && cycle < 0.24f);
+    }
+
+    // Arm positions in world coordinates (rotated by yaw)
+    float r = 1.3f;
+    float radYaw = yaw * (PI / 180.0f);
+    float cosY = cosf(radYaw);
+    float sinY = sinf(radYaw);
+
+    Vector3 armFL = Vector3{ position.x + (r * cosY - r * sinY), position.y + 0.35f, position.z + (r * sinY + r * cosY) };
+    Vector3 armFR = Vector3{ position.x + (-r * cosY - r * sinY), position.y + 0.35f, position.z + (-r * sinY + r * cosY) };
+    Vector3 armAL = Vector3{ position.x + (r * cosY + r * sinY), position.y + 0.35f, position.z + (r * sinY - r * cosY) };
+    Vector3 armAR = Vector3{ position.x + (-r * cosY + r * sinY), position.y + 0.35f, position.z + (-r * sinY - r * cosY) };
+    Vector3 bellyPos = Vector3{ position.x, position.y - 0.32f, position.z };
+
+    // Select color palette by role & vision mode
+    Color strobeCol = WHITE;
+    Color portCol = Color{ 255, 40, 40, 255 };    // Left: Red
+    Color starCol = Color{ 40, 255, 60, 255 };    // Right: Green
+    Color aftCol = RAYWHITE;
+
+    if (visionMode == VisionMode::FLIR_THERMAL) {
+        strobeCol = Color{ 255, 240, 180, 255 };
+        portCol = Color{ 255, 120, 20, 255 };
+        starCol = Color{ 255, 160, 30, 255 };
+        aftCol = Color{ 255, 220, 150, 255 };
+    } else if (visionMode == VisionMode::NVG_GREEN) {
+        strobeCol = Color{ 140, 255, 160, 255 };
+        portCol = Color{ 80, 255, 100, 255 };
+        starCol = Color{ 120, 255, 140, 255 };
+        aftCol = Color{ 180, 255, 180, 255 };
+    } else {
+        switch (role) {
+            case DroneRole::RECON:
+                strobeCol = Color{ 0, 240, 255, 255 }; // Electric Cyan Scout Strobe
+                aftCol = SKYBLUE;
+                break;
+            case DroneRole::TASK_FORCE:
+                strobeCol = isEngagedCombat ? Color{ 255, 20, 20, 255 } : Color{ 255, 140, 0, 255 }; // Crimson Combat or Amber
+                aftCol = isEngagedCombat ? RED : ORANGE;
+                break;
+            case DroneRole::SUPPORT:
+                strobeCol = Color{ 50, 255, 90, 255 }; // Emerald Logistics Strobe
+                aftCol = LIME;
+                break;
+        }
+    }
+
+    // 1. Static navigation LEDs on arm tips
+    DrawSphere(armFL, 0.12f, portCol);
+    DrawSphere(armFR, 0.12f, starCol);
+    DrawSphere(armAL, 0.12f, aftCol);
+    DrawSphere(armAR, 0.12f, aftCol);
+
+    // 2. High-intensity flashing strobe beacon
+    if (strobeBurst) {
+        DrawSphere(bellyPos, 0.22f, WHITE);
+        DrawSphere(bellyPos, 0.70f, Fade(strobeCol, 0.55f));
+        DrawSphere(armFL, 0.35f, Fade(portCol, 0.45f));
+        DrawSphere(armFR, 0.35f, Fade(starCol, 0.45f));
+
+        // Subtle anti-collision strobe glare line
+        DrawLine3D(Vector3{ bellyPos.x - 0.7f, bellyPos.y, bellyPos.z },
+                   Vector3{ bellyPos.x + 0.7f, bellyPos.y, bellyPos.z }, Fade(strobeCol, 0.75f));
+    }
+}
+
+void Drone::DrawGroundSpotlight(VisionMode visionMode) const {
+    if (isDestroyed || position.y < 1.2f) return;
+
+    Vector3 groundPos = Vector3{ position.x, 0.05f, position.z };
+    float spotRadius = std::clamp(position.y * 0.38f + 3.5f, 4.0f, 22.0f);
+
+    Color spotColor = Color{ 0, 180, 255, 255 };
+    if (visionMode == VisionMode::FLIR_THERMAL) {
+        spotColor = Color{ 255, 150, 40, 255 };
+    } else if (visionMode == VisionMode::NVG_GREEN) {
+        spotColor = Color{ 60, 255, 100, 255 };
+    } else {
+        switch (role) {
+            case DroneRole::RECON:      spotColor = Color{ 0, 200, 255, 255 }; break;
+            case DroneRole::TASK_FORCE: spotColor = Color{ 255, 130, 20, 255 }; break;
+            case DroneRole::SUPPORT:    spotColor = Color{ 50, 240, 90, 255 }; break;
+        }
+    }
+
+    // 1. Outer Soft Ground Spotlight Disc
+    DrawCircle3D(groundPos, spotRadius, Vector3{ 1, 0, 0 }, 90.0f, Fade(spotColor, 0.18f));
+    DrawCircle3D(groundPos, spotRadius * 0.5f, Vector3{ 1, 0, 0 }, 90.0f, Fade(spotColor, 0.28f));
+    DrawCircle3D(groundPos, spotRadius, Vector3{ 1, 0, 0 }, 90.0f, Fade(spotColor, 0.35f));
+
+    // 2. Subtle Conical Volumetric Light Beam
+    Vector3 topLightPos = Vector3{ position.x, position.y - 0.25f, position.z };
+    DrawCylinderEx(topLightPos, groundPos, 0.35f, spotRadius, 16, Fade(spotColor, 0.045f));
+
+    // 3. Role-Specific Ground Spotlight FX
+    if (role == DroneRole::RECON && state != DroneState::IDLE_AT_BASE) {
+        // Rotating tactical recon radar sweep line on ground
+        float sweepAngle = GetTime() * 2.8f + (float)id * 1.5f;
+        Vector3 sweepEnd = Vector3{ groundPos.x + sinf(sweepAngle) * spotRadius, 0.06f, groundPos.z + cosf(sweepAngle) * spotRadius };
+        DrawLine3D(groundPos, sweepEnd, Fade(spotColor, 0.60f));
+        DrawCircle3D(groundPos, spotRadius * 0.25f, Vector3{ 1, 0, 0 }, 90.0f, Fade(WHITE, 0.35f));
+    } else if (role == DroneRole::TASK_FORCE) {
+        // Combat target spotlight designation when engaging
+        if (isFiringLaser && laserTargetPos.y >= 0.0f) {
+            Vector3 tgtGround = Vector3{ laserTargetPos.x, 0.08f, laserTargetPos.z };
+            DrawCircle3D(tgtGround, 4.5f, Vector3{ 1, 0, 0 }, 90.0f, Fade(RED, 0.55f));
+            DrawCircle3D(tgtGround, 2.0f, Vector3{ 1, 0, 0 }, 90.0f, Fade(GOLD, 0.70f));
+            DrawLine3D(position, tgtGround, Fade(Color{ 255, 60, 40, 255 }, 0.30f));
+        }
+    } else if (role == DroneRole::SUPPORT) {
+        // Expanding safe-zone halo when loitering or resupplying
+        if (state == DroneState::RESUPPLYING_IN_AIR || state == DroneState::LOITERING_IN_AREA) {
+            float pulseRadius = fmodf(GetTime() * 12.0f, spotRadius * 1.3f);
+            DrawCircle3D(groundPos, pulseRadius, Vector3{ 1, 0, 0 }, 90.0f, Fade(spotColor, 0.45f * (1.0f - pulseRadius / (spotRadius * 1.3f))));
+            DrawCircle3D(groundPos, spotRadius * 1.2f, Vector3{ 1, 0, 0 }, 90.0f, Fade(LIME, 0.30f));
         }
     }
 }
