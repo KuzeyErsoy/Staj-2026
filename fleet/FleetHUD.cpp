@@ -8,13 +8,17 @@
 
 namespace DroneFleet {
 
-FleetHUD::FleetHUD() : fontLoaded(false) {
+FleetHUD::FleetHUD() : fontLoaded(false), pipTextureLoaded(false) {
     Init();
 }
 
 FleetHUD::~FleetHUD() {
     if (fontLoaded) {
         UnloadFont(customFont);
+    }
+    if (pipTextureLoaded) {
+        UnloadRenderTexture(pipTexture);
+        pipTextureLoaded = false;
     }
 }
 
@@ -37,7 +41,16 @@ void FleetHUD::Init() {
             }
         }
     }
+
+    if (!pipTextureLoaded) {
+        pipTexture = LoadRenderTexture(340, 200);
+        if (pipTexture.id > 0) {
+            SetTextureFilter(pipTexture.texture, TEXTURE_FILTER_BILINEAR);
+            pipTextureLoaded = true;
+        }
+    }
 }
+
 
 void FleetHUD::DrawCustomText(const char* text, float posX, float posY, float fontSize, Color color) const {
     if (fontLoaded) {
@@ -294,8 +307,192 @@ void FleetHUD::DrawDroneInspector2D(const std::vector<std::unique_ptr<Drone>>& d
     DrawCustomText("[1..9] Select Drone | [I] Close Inspector", panelX + panelW / 2 - 120, panelY + panelH - 22, 12.0f, GRAY);
 }
 
+void FleetHUD::CyclePiPTarget(int dir) {
+    pipDroneTarget += dir;
+    if (pipDroneTarget > 9) pipDroneTarget = 0;
+    if (pipDroneTarget < 0) pipDroneTarget = 9;
+}
+
+int FleetHUD::GetEffectivePiPDroneIndex(const std::vector<std::unique_ptr<Drone>>& drones) const {
+    if (drones.empty()) return 0;
+
+    if (pipDroneTarget >= 1 && pipDroneTarget <= (int)drones.size()) {
+        return pipDroneTarget - 1;
+    }
+
+    // Auto Priority Mode (0):
+    // 1. Drone actively in combat / engaging
+    for (int i = 0; i < (int)drones.size(); i++) {
+        if (!drones[i]->isDestroyed && drones[i]->state == DroneState::ENGAGING) {
+            return i;
+        }
+    }
+    // 2. Drone requesting support / in danger
+    for (int i = 0; i < (int)drones.size(); i++) {
+        if (!drones[i]->isDestroyed && drones[i]->state == DroneState::REQUESTING_SUPPORT) {
+            return i;
+        }
+    }
+    // 3. Drone moving to target
+    for (int i = 0; i < (int)drones.size(); i++) {
+        if (!drones[i]->isDestroyed && drones[i]->state == DroneState::MOVING_TO_TARGET) {
+            return i;
+        }
+    }
+    // 4. Recon drone scanning or on patrol
+    for (int i = 0; i < (int)drones.size(); i++) {
+        if (!drones[i]->isDestroyed && drones[i]->role == DroneRole::RECON && drones[i]->state != DroneState::IDLE_AT_BASE) {
+            return i;
+        }
+    }
+    // 5. Inspector drone if valid
+    int insIdx = inspectorDroneId - 1;
+    if (insIdx >= 0 && insIdx < (int)drones.size() && !drones[insIdx]->isDestroyed) {
+        return insIdx;
+    }
+    // 6. Default to first alive drone or 0
+    for (int i = 0; i < (int)drones.size(); i++) {
+        if (!drones[i]->isDestroyed) return i;
+    }
+    return 0;
+}
+
+void FleetHUD::DrawPiPCam2D(const std::vector<std::unique_ptr<Drone>>& drones, const std::vector<EnemyCluster>& clusters, const FleetCamera& fleetCam) const {
+    if (!showPiPWindow || !pipTextureLoaded || drones.empty()) return;
+
+    int screenWidth = GetScreenWidth();
+    int screenHeight = GetScreenHeight();
+
+    int targetIdx = GetEffectivePiPDroneIndex(drones);
+    if (targetIdx < 0 || targetIdx >= (int)drones.size()) return;
+    const auto& drone = *drones[targetIdx];
+
+    int pipW = 340;
+    int pipH = 210;
+    int pipX = screenWidth - pipW - 20;
+    int pipY = showTacticalMap ? (screenHeight - 200 - 20 - pipH - 12) : (screenHeight - pipH - 20);
+
+    Color roleColor = (drone.role == DroneRole::RECON) ? SKYBLUE : ((drone.role == DroneRole::TASK_FORCE) ? ORANGE : LIME);
+    Color frameBorderCol = drone.isDestroyed ? RED : (drone.snrDb < 15.0f ? RED : (drone.snrDb < 25.0f ? YELLOW : roleColor));
+
+    // 1. Background Panel & Outer Border
+    DrawRectangle(pipX, pipY, pipW, pipH, Color{ 4, 10, 20, 245 });
+    DrawRectangleLines(pipX, pipY, pipW, pipH, frameBorderCol);
+    DrawRectangleLines(pipX + 2, pipY + 2, pipW - 4, pipH - 4, Fade(frameBorderCol, 0.35f));
+
+    // 2. Top Header Bar
+    int headH = 24;
+    DrawRectangle(pipX + 3, pipY + 3, pipW - 6, headH, Color{ 6, 14, 28, 230 });
+    DrawLine(pipX + 3, pipY + headH + 3, pipX + pipW - 3, pipY + headH + 3, frameBorderCol);
+
+    const char* modeBadge = (pipDroneTarget == 0) ? "[AUTO]" : "[LOCK]";
+    const char* roleName = (drone.role == DroneRole::RECON) ? "RECON" : ((drone.role == DroneRole::TASK_FORCE) ? "STRIKE" : "SUPPORT");
+    const char* titleStr = TextFormat("PiP CAM // #%d %s %s", drone.id, roleName, modeBadge);
+    DrawCustomText(titleStr, pipX + 8, pipY + 7, 11.0f, roleColor);
+
+    // Blinking REC dot
+    bool recBlink = ((int)(GetTime() * 2.5f)) % 2 == 0;
+    DrawCircle(pipX + pipW - 48, pipY + 14, 4, recBlink ? RED : DARKGRAY);
+    DrawCustomText("LIVE", pipX + pipW - 40, pipY + 7, 10.0f, recBlink ? RED : LIGHTGRAY);
+
+    // 3. Render 3D Video Viewport Texture (Inverted Y for OpenGL)
+    int viewX = pipX + 4;
+    int viewY = pipY + headH + 4;
+    int viewW = pipW - 8;
+    int viewH = pipH - headH - 28;
+
+    Rectangle srcRect = { 0.0f, 0.0f, (float)pipTexture.texture.width, -(float)pipTexture.texture.height };
+    Rectangle dstRect = { (float)viewX, (float)viewY, (float)viewW, (float)viewH };
+    DrawTexturePro(pipTexture.texture, srcRect, dstRect, Vector2{ 0.0f, 0.0f }, 0.0f, WHITE);
+
+    // 4. Optical Corner Brackets inside Viewport
+    int bLen = 14;
+    Color bracketCol = Fade(frameBorderCol, 0.65f);
+    // Top-Left
+    DrawLine(viewX + 4, viewY + 4, viewX + 4 + bLen, viewY + 4, bracketCol);
+    DrawLine(viewX + 4, viewY + 4, viewX + 4, viewY + 4 + bLen, bracketCol);
+    // Top-Right
+    DrawLine(viewX + viewW - 4, viewY + 4, viewX + viewW - 4 - bLen, viewY + 4, bracketCol);
+    DrawLine(viewX + viewW - 4, viewY + 4, viewX + viewW - 4, viewY + 4 + bLen, bracketCol);
+    // Bottom-Left
+    DrawLine(viewX + 4, viewY + viewH - 4, viewX + 4 + bLen, viewY + viewH - 4, bracketCol);
+    DrawLine(viewX + 4, viewY + viewH - 4, viewX + 4, viewY + viewH - 4 - bLen, bracketCol);
+    // Bottom-Right
+    DrawLine(viewX + viewW - 4, viewY + viewH - 4, viewX + viewW - 4 - bLen, viewY + viewH - 4, bracketCol);
+    DrawLine(viewX + viewW - 4, viewY + viewH - 4, viewX + viewW - 4, viewY + viewH - 4 - bLen, bracketCol);
+
+    // 5. Center Boresight Reticle
+    int vcx = viewX + viewW / 2;
+    int vcy = viewY + viewH / 2;
+    DrawLine(vcx - 16, vcy, vcx - 5, vcy, Fade(LIME, 0.6f));
+    DrawLine(vcx + 5, vcy, vcx + 16, vcy, Fade(LIME, 0.6f));
+    DrawLine(vcx, vcy - 16, vcx, vcy - 5, Fade(LIME, 0.6f));
+    DrawLine(vcx, vcy + 5, vcx, vcy + 16, Fade(LIME, 0.6f));
+    DrawCircleLines(vcx, vcy, 5, Fade(LIME, 0.4f));
+
+    // Pitch ladder indication
+    for (int p = -1; p <= 1; p++) {
+        if (p == 0) continue;
+        int py = vcy + p * 22;
+        DrawLine(vcx - 10, py, vcx - 4, py, Fade(LIME, 0.35f));
+        DrawLine(vcx + 4, py, vcx + 10, py, Fade(LIME, 0.35f));
+    }
+
+    // 6. Dynamic Signal Degradation, Glitch & Noise FX
+    if (drone.isDestroyed) {
+        // Destroyed: Static noise blizzard & Lost Signal warning
+        for (int i = 0; i < 90; i++) {
+            int rx = GetRandomValue(viewX, viewX + viewW);
+            int ry = GetRandomValue(viewY, viewY + viewH);
+            int rw = GetRandomValue(2, 6);
+            int rh = GetRandomValue(1, 3);
+            DrawRectangle(rx, ry, rw, rh, Fade(RAYWHITE, (float)GetRandomValue(30, 80) / 100.0f));
+        }
+        int bW = 220;
+        int bH = 34;
+        int bx = viewX + (viewW - bW) / 2;
+        int by = viewY + (viewH - bH) / 2;
+        DrawRectangle(bx, by, bW, bH, Color{ 24, 4, 4, 230 });
+        DrawRectangleLines(bx, by, bW, bH, RED);
+        DrawCustomText("[ NO RF CARRIER // LOSS ]", bx + 18, by + 6, 11.0f, RED);
+        DrawCustomText("DOWNED AT COMBAT SECTOR", bx + 22, by + 18, 9.0f, YELLOW);
+    } else {
+        float noiseIntensity = 1.0f - drone.signalQuality;
+        if (noiseIntensity > 0.08f) {
+            int grainCount = (int)(noiseIntensity * 70.0f);
+            for (int i = 0; i < grainCount; i++) {
+                int rx = GetRandomValue(viewX, viewX + viewW);
+                int ry = GetRandomValue(viewY, viewY + viewH);
+                int rw = GetRandomValue(1, 3);
+                int rh = GetRandomValue(1, 2);
+                DrawRectangle(rx, ry, rw, rh, Fade(RAYWHITE, noiseIntensity * (float)GetRandomValue(25, 75) / 100.0f));
+            }
+            int lineCount = (int)(noiseIntensity * 5.0f);
+            for (int i = 0; i < lineCount; i++) {
+                int ry = GetRandomValue(viewY, viewY + viewH);
+                int rh = GetRandomValue(1, 3);
+                Color glitchCol = (GetRandomValue(0, 10) > 7) ? Fade(RED, noiseIntensity * 0.35f) : Fade(SKYBLUE, noiseIntensity * 0.25f);
+                DrawRectangle(viewX, ry, viewW, rh, glitchCol);
+            }
+        }
+        if (drone.snrDb < 15.0f && ((int)(GetTime() * 3)) % 2 == 0) {
+            DrawCustomText("! LOW SNR LINK !", viewX + viewW / 2 - 45, viewY + 8, 10.0f, RED);
+        }
+    }
+
+    // 7. Bottom Telemetry OSD Strip
+    int botY = pipY + pipH - 22;
+    DrawRectangle(pipX + 3, botY, pipW - 6, 19, Color{ 5, 11, 22, 235 });
+    DrawLine(pipX + 3, botY, pipX + pipW - 3, botY, Fade(frameBorderCol, 0.4f));
+
+    float spd = Vector3Length(drone.velocity);
+    const char* oadStr = TextFormat("ALT:%.0fm | SPD:%.1fm/s | SNR:%.1fdB | RNG:%.0fm", drone.position.y, spd, drone.snrDb, drone.distanceFromBase);
+    DrawCustomText(oadStr, pipX + 8, botY + 4, 10.0f, RAYWHITE);
+}
+
 void FleetHUD::DrawFPVSignalOverlay2D(const Drone& activeDrone) const {
     int screenWidth = GetScreenWidth();
+
     int screenHeight = GetScreenHeight();
 
     // 1. Check if drone is destroyed
@@ -573,7 +770,7 @@ void FleetHUD::Draw2DHUD(const TelemetryContext& telemetry,
         float timeW = fontLoaded ? MeasureTextEx(customFont, timeStr, 12.0f, 1.0f).x : (float)MeasureText(timeStr, 12);
         DrawCustomText(timeStr, bannerX + (bannerW - timeW) / 2.0f, bannerY + 26, 12.0f, timeCol);
 
-        const char* hintMsg = "[TAB] View | [T] FLIR IR | [N] NVG | [M] Map | [I] Telemetry | [F1-F8] Panels";
+        const char* hintMsg = "[TAB] View | [F6] PiP | [T] FLIR | [N] NVG | [M] Map | [I] Inspector | [F1-F8] Panels";
         float hintW = fontLoaded ? MeasureTextEx(customFont, hintMsg, 11.0f, 1.0f).x : (float)MeasureText(hintMsg, 11);
         DrawCustomText(hintMsg, bannerX + (bannerW - hintW) / 2.0f, bannerY + 44, 11.0f, GOLD);
     }
@@ -586,6 +783,9 @@ void FleetHUD::Draw2DHUD(const TelemetryContext& telemetry,
         int mapY = screenHeight - mapH - 20;
         DrawTacticalMap2D(mapX, mapY, mapW, mapH, false, drones, clusters);
     }
+
+    // 5.5. Live Picture-in-Picture (PiP) Nose Camera Feed
+    DrawPiPCam2D(drones, clusters, fleetCam);
 
     // 6. Tactical Operational Command Logs (Bottom-Left)
     if (showTerminalPanel) {
@@ -642,6 +842,7 @@ void FleetHUD::Draw2DHUD(const TelemetryContext& telemetry,
         DrawDroneInspector2D(drones);
     }
 }
+
 
 void FleetHUD::DrawFLIROverlay2D(const Camera3D& cam, const std::vector<EnemyCluster>& clusters, const std::vector<std::unique_ptr<Drone>>& drones) const {
     int screenWidth = GetScreenWidth();

@@ -377,6 +377,12 @@ int main() {
         fleetManager.ToggleTerminalPanel();
       if (IsKeyPressed(KEY_F4))
         fleetManager.ToggleCameraBanner();
+      if (IsKeyPressed(KEY_F6) || IsKeyPressed(KEY_V))
+        fleetManager.TogglePiPWindow();
+      if (IsKeyPressed(KEY_LEFT_BRACKET))
+        fleetManager.CyclePiPTarget(-1);
+      if (IsKeyPressed(KEY_RIGHT_BRACKET))
+        fleetManager.CyclePiPTarget(1);
       if (IsKeyPressed(KEY_F8))
         fleetManager.ToggleAllPanels();
 
@@ -388,11 +394,17 @@ int main() {
     }
     }
 
+    // 0. Off-screen PiP Video Pass (Rendered before Main Screen Pass)
+    if (currentState == STATE_FLEET_SIM) {
+      fleetManager.RenderPiPCam();
+    }
+
     // --- DRAW LOGIC BY STATE ---
     BeginDrawing();
     if (currentState == STATE_FLEET_SIM) {
       if (fleetManager.GetVisionMode() == DroneFleet::VisionMode::FLIR_THERMAL) {
         ClearBackground(Color{ 4, 8, 14, 255 });
+
       } else if (fleetManager.GetVisionMode() == DroneFleet::VisionMode::NVG_GREEN) {
         ClearBackground(Color{ 2, 14, 6, 255 });
       } else {

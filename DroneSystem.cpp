@@ -167,6 +167,17 @@ void DroneSystemManager::Update(float dt) {
         ToggleNightVision();
     }
 
+    // Picture-in-Picture (PiP) Hotkeys
+    if (IsKeyPressed(KEY_F6) || IsKeyPressed(KEY_V)) {
+        TogglePiPWindow();
+    }
+    if (IsKeyPressed(KEY_LEFT_BRACKET)) {
+        CyclePiPTarget(-1);
+    }
+    if (IsKeyPressed(KEY_RIGHT_BRACKET)) {
+        CyclePiPTarget(1);
+    }
+
     float effectiveDt = isPaused ? 0.0f : dt * timeScale;
     if (effectiveDt <= 0.0f) return;
 
@@ -193,6 +204,79 @@ void DroneSystemManager::Update(float dt) {
 
     // 4. Update Telemetry counters
     UpdateTelemetry();
+}
+
+void DroneSystemManager::TogglePiPWindow() {
+    fleetHUD.TogglePiPWindow();
+    LogTerminal(fleetHUD.IsPiPEnabled() ? "[PICTURE-IN-PICTURE] Live FPV Nose Camera feed enabled." : "[PICTURE-IN-PICTURE] Live FPV Nose Camera feed disabled.");
+    if (IsAudioDeviceReady()) AudioManager::Instance().PlayClick();
+}
+
+void DroneSystemManager::CyclePiPTarget(int dir) {
+    fleetHUD.CyclePiPTarget(dir);
+    int target = fleetHUD.GetPiPTarget();
+    if (target == 0) {
+        LogTerminal("[PICTURE-IN-PICTURE] Target mode: AUTO PRIORITY LOCK (Combat / Threat).");
+    } else {
+        char buf[64];
+        snprintf(buf, sizeof(buf), "[PICTURE-IN-PICTURE] Locked to Drone #%d Nose Cam.", target);
+        LogTerminal(buf);
+    }
+    if (IsAudioDeviceReady()) AudioManager::Instance().PlayClick();
+}
+
+void DroneSystemManager::RenderPiPCam() {
+    if (!fleetHUD.IsPiPEnabled() || drones.empty()) return;
+
+    RenderTexture2D pipTex = fleetHUD.GetPiPRenderTexture();
+    if (pipTex.id <= 0) return;
+
+    int droneIdx = fleetHUD.GetEffectivePiPDroneIndex(drones);
+    if (droneIdx < 0 || droneIdx >= (int)drones.size()) return;
+
+    const auto& drone = *drones[droneIdx];
+
+    // Calculate Nose Camera position and forward orientation
+    Camera3D noseCam;
+    noseCam.up = Vector3{ 0.0f, 1.0f, 0.0f };
+    noseCam.fovy = 70.0f;
+    noseCam.projection = CAMERA_PERSPECTIVE;
+
+    float yawRad = drone.yaw * DEG2RAD;
+    float pitchRad = drone.pitch * DEG2RAD;
+
+    Vector3 forward = Vector3{
+        sinf(yawRad) * cosf(pitchRad),
+        -sinf(pitchRad),
+        cosf(yawRad) * cosf(pitchRad)
+    };
+
+    Vector3 noseOffset = Vector3{
+        forward.x * 1.5f,
+        0.35f + forward.y * 1.5f,
+        forward.z * 1.5f
+    };
+
+    noseCam.position = Vector3Add(drone.position, noseOffset);
+    noseCam.target = Vector3Add(noseCam.position, Vector3Scale(forward, 40.0f));
+
+    // Render 3D Scene into PiP RenderTexture
+    BeginTextureMode(pipTex);
+
+    VisionMode vm = fleetHUD.GetVisionMode();
+    if (vm == VisionMode::FLIR_THERMAL) {
+        ClearBackground(Color{ 4, 8, 14, 255 });
+    } else if (vm == VisionMode::NVG_GREEN) {
+        ClearBackground(Color{ 2, 14, 6, 255 });
+    } else {
+        ClearBackground(Color{ 10, 16, 26, 255 });
+    }
+
+    BeginMode3D(noseCam);
+    Draw3D();
+    EndMode3D();
+
+    EndTextureMode();
 }
 
 void DroneSystemManager::ToggleThermalFLIR() {
@@ -229,3 +313,4 @@ void DroneSystemManager::Draw3D() const {
 void DroneSystemManager::Draw2DHUD() const {
     fleetHUD.Draw2DHUD(telemetry, drones, clusterManager.GetClusters(), fleetCamera, timeScale, isPaused);
 }
+

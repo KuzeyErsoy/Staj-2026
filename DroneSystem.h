@@ -36,11 +36,19 @@ public:
     void ToggleAllPanels() { fleetHUD.ToggleAllPanels(); }
     void SelectInspectorDrone(int id) { fleetHUD.SelectInspectorDrone(id); }
 
+    // Picture-in-Picture (PiP) Nose Camera
+    void RenderPiPCam();
+    void TogglePiPWindow();
+    void CyclePiPTarget(int dir);
+    void SetPiPTarget(int id) { fleetHUD.SetPiPTarget(id); }
+    int GetPiPTarget() const { return fleetHUD.GetPiPTarget(); }
+
     // FLIR / Night Vision Modes
     void ToggleThermalFLIR();
     void ToggleNightVision();
     void SetVisionMode(DroneFleet::VisionMode mode) { fleetHUD.SetVisionMode(mode); }
     DroneFleet::VisionMode GetVisionMode() const { return fleetHUD.GetVisionMode(); }
+
 
     // Fleet Accessors
     const DroneFleet::HangarBase& GetHangarBase() const { return hangarBase; }
