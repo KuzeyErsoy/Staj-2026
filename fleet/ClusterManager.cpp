@@ -133,7 +133,14 @@ void ClusterManager::Update(FleetContext& ctx, float dt) {
                     e.isFiringCounterAttack = true;
                     e.counterAttackTargetPos = closestTargetDrone->position;
 
-                    closestTargetDrone->hp -= dt * 12.0f;
+                    // Automatic Countermeasure Reaction when targeted by armed hostile
+                    if (closestTargetDrone->flareCooldown <= 0.0f && closestTargetDrone->hp <= closestTargetDrone->maxHp * 0.85f) {
+                        closestTargetDrone->DeployFlares(&ctx);
+                    }
+
+                    // Flares & Chaff decoy hostile targeting, reducing damage by 65%
+                    float damageMultiplier = (closestTargetDrone->flareAlertTimer > 0.0f) ? 0.35f : 1.0f;
+                    closestTargetDrone->hp -= dt * 12.0f * damageMultiplier;
 
                     if (closestTargetDrone->hp <= 0.0f) {
                         closestTargetDrone->hp = 0.0f;

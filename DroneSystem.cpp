@@ -178,6 +178,33 @@ void DroneSystemManager::Update(float dt) {
         CyclePiPTarget(1);
     }
 
+    // Manual Defensive Flare Deployment Hotkey (X)
+    if (IsKeyPressed(KEY_X)) {
+        int targetCam = fleetCamera.GetActiveCameraMode();
+        int targetDroneId = (targetCam >= 1 && targetCam <= 9) ? targetCam : fleetHUD.GetInspectorDroneId();
+
+        Drone* targetDrone = nullptr;
+        for (auto& d : drones) {
+            if (d->id == targetDroneId && !d->isDestroyed && d->state != DroneState::IDLE_AT_BASE) {
+                targetDrone = d.get();
+                break;
+            }
+        }
+
+        // Fallback to active PiP target or any active drone in flight
+        if (!targetDrone) {
+            int pipIdx = fleetHUD.GetEffectivePiPDroneIndex(drones);
+            if (pipIdx >= 0 && pipIdx < (int)drones.size() && !drones[pipIdx]->isDestroyed) {
+                targetDrone = drones[pipIdx].get();
+            }
+        }
+
+        if (targetDrone) {
+            FleetContext tempCtx{ drones, clusterManager, missileSystem, hangarBase, telemetry };
+            targetDrone->DeployFlares(&tempCtx);
+        }
+    }
+
     float effectiveDt = isPaused ? 0.0f : dt * timeScale;
     if (effectiveDt <= 0.0f) return;
 

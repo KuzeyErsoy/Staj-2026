@@ -51,10 +51,17 @@ public:
     bool isResupplyBeamActive = false;
     Vector3 resupplyTargetPos = { 0.0f, 0.0f, 0.0f };
 
+    // Defensive Flare / Chaff Countermeasures
+    std::vector<CountermeasureParticle> flareParticles;
+    float flareCooldown = 0.0f;
+    float flareAlertTimer = 0.0f;
+
     Drone(int id, DroneRole role);
     virtual ~Drone() = default;
 
     void LogAction(const std::string& msg);
+    void DeployFlares(FleetContext* ctx = nullptr);
+    void UpdateFlares(float dt);
     virtual void Update(FleetContext& ctx, float dt) = 0;
     virtual void Draw3D(VisionMode visionMode = VisionMode::NORMAL) const;
     virtual void ResetToDock();
@@ -64,6 +71,7 @@ protected:
     void ApplyFlankingAndSeparation(FleetContext& ctx, float dt);
     void DrawNavigationLEDs(VisionMode visionMode) const;
     void DrawGroundSpotlight(VisionMode visionMode) const;
+    void DrawFlares(VisionMode visionMode) const;
 };
 
 // --- RECON DRONE (SCOUT / HIGH ALTITUDE SWEEP) ---

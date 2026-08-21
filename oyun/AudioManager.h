@@ -14,6 +14,7 @@ public:
     void PlayHurt();
     void PlayLevelUp();
     void PlayClick();
+    void PlayFlare();
 
 private:
     AudioManager();
@@ -27,6 +28,7 @@ private:
     Sound soundHurt;
     Sound soundLevelUp;
     Sound soundClick;
+    Sound soundFlare;
 
     Sound CreateDashSound();
     Sound CreateCollectSound();
@@ -34,4 +36,5 @@ private:
     Sound CreateHurtSound();
     Sound CreateLevelUpSound();
     Sound CreateClickSound();
+    Sound CreateFlareSound();
 };

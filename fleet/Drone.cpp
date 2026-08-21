@@ -48,6 +48,9 @@ void Drone::ResetToDock() {
     signalQuality = 1.0f;
     telemetryLatencyMs = 12.0f;
     bitrateMbps = 12.0f;
+    flareParticles.clear();
+    flareCooldown = 0.0f;
+    flareAlertTimer = 0.0f;
 }
 
 void Drone::UpdateMovementPhysics(float targetSpeed, float dt) {
@@ -135,6 +138,7 @@ void Drone::Draw3D(VisionMode visionMode) const {
             DrawCubeWires(position, 1.85f, 0.45f, 1.85f, BLACK);
             DrawCircle3D(position, 1.8f, Vector3{ 1, 0, 0 }, 90.0f, Fade(RED, 0.6f));
         }
+        DrawFlares(visionMode);
         return;
     }
 
@@ -229,6 +233,9 @@ void Drone::Draw3D(VisionMode visionMode) const {
             DrawSphere(resupplyTargetPos, 0.7f, LIME);
         }
     }
+
+    // 3. Defensive Magnesium Flares & Chaff Particles
+    DrawFlares(visionMode);
 }
 
 void Drone::DrawNavigationLEDs(VisionMode visionMode) const {
@@ -371,6 +378,151 @@ void Drone::DrawGroundSpotlight(VisionMode visionMode) const {
     }
 }
 
+void Drone::DeployFlares(FleetContext* ctx) {
+    if (isDestroyed || flareCooldown > 0.0f) return;
+
+    flareCooldown = 4.5f;   // 4.5 sec tactical reload/recharge cooldown
+    flareAlertTimer = 2.5f; // 2.5 sec active evasion & HUD alert banner
+
+    LogAction("Deployed Defensive Magnesium Flare Salvo (Countermeasure)");
+    if (ctx) {
+        char buf[128];
+        snprintf(buf, sizeof(buf), "[DEFENSE] Drone #%d DEPLOYED FLARES (Hostile Lock Decoyed)!", id);
+        ctx->LogTerminal(buf);
+    }
+
+    if (IsAudioDeviceReady()) {
+        AudioManager::Instance().PlayFlare();
+    }
+
+    float radYaw = yaw * (PI / 180.0f);
+    Vector3 fwd = Vector3{ sinf(radYaw), 0.0f, cosf(radYaw) };
+    Vector3 right = Vector3{ cosf(radYaw), 0.0f, -sinf(radYaw) };
+    Vector3 up = Vector3{ 0.0f, 1.0f, 0.0f };
+
+    // Lateral flare ejection pods: Left & Right wings (8 particles per side = 16 total)
+    for (int side = -1; side <= 1; side += 2) {
+        Vector3 podPos = Vector3Add(position, Vector3Scale(right, (float)side * 1.1f));
+        podPos.y += 0.15f;
+
+        for (int i = 0; i < 8; i++) {
+            CountermeasureParticle p;
+            p.position = podPos;
+
+            float speedSpread = (float)GetRandomValue(14, 22);
+            float lateralVariance = (float)GetRandomValue(-15, 15) * 0.01f;
+            float rearVariance = (float)GetRandomValue(20, 60) * -0.01f; // eject angled rearwards
+            float upVariance = (float)GetRandomValue(15, 55) * 0.01f;   // eject slightly upwards
+
+            Vector3 ejectDir = Vector3Normalize(Vector3Add(
+                Vector3Scale(right, (float)side + lateralVariance),
+                Vector3Add(Vector3Scale(fwd, rearVariance), Vector3Scale(up, upVariance))
+            ));
+
+            // Combined ejection velocity with drone inertia
+            p.velocity = Vector3Add(Vector3Scale(ejectDir, speedSpread), Vector3Scale(velocity, 0.40f));
+            p.life = 0.0f;
+            p.maxLife = (float)GetRandomValue(12, 20) * 0.1f; // 1.2s - 2.0s burn time
+            p.size = (float)GetRandomValue(30, 48) * 0.01f;
+            p.color = (GetRandomValue(0, 10) > 3) ? GOLD : WHITE;
+            p.isSmoke = false;
+            p.isAlive = true;
+
+            flareParticles.push_back(p);
+        }
+    }
+}
+
+void Drone::UpdateFlares(float dt) {
+    if (flareCooldown > 0.0f) flareCooldown -= dt;
+    if (flareAlertTimer > 0.0f) flareAlertTimer -= dt;
+
+    if (flareParticles.empty()) return;
+
+    std::vector<CountermeasureParticle> newSmoke;
+
+    for (auto& p : flareParticles) {
+        if (!p.isAlive) continue;
+
+        p.life += dt;
+        if (p.life >= p.maxLife) {
+            p.isAlive = false;
+            continue;
+        }
+
+        p.position = Vector3Add(p.position, Vector3Scale(p.velocity, dt));
+
+        if (!p.isSmoke) {
+            p.velocity = Vector3Scale(p.velocity, 0.92f); // Aerodynamic drag
+            p.velocity.y -= 7.5f * dt;                     // Gravity
+
+            // Spawn lingering smoke puff trail behind burning flare
+            if (GetRandomValue(0, 100) < 28) {
+                CountermeasureParticle s;
+                s.position = p.position;
+                s.velocity = Vector3Scale(p.velocity, 0.12f);
+                s.life = 0.0f;
+                s.maxLife = 0.85f;
+                s.size = p.size * 1.5f;
+                s.color = Fade(LIGHTGRAY, 0.35f);
+                s.isSmoke = true;
+                s.isAlive = true;
+                newSmoke.push_back(s);
+            }
+        } else {
+            p.velocity = Vector3Scale(p.velocity, 0.88f);
+            p.velocity.y += 0.6f * dt; // Smoke buoyancy
+            p.size += dt * 0.35f;      // Smoke expands
+        }
+    }
+
+    for (const auto& s : newSmoke) {
+        flareParticles.push_back(s);
+    }
+
+    flareParticles.erase(std::remove_if(flareParticles.begin(), flareParticles.end(), [](const CountermeasureParticle& p) {
+        return !p.isAlive;
+    }), flareParticles.end());
+}
+
+void Drone::DrawFlares(VisionMode visionMode) const {
+    if (flareParticles.empty()) return;
+
+    for (const auto& p : flareParticles) {
+        if (!p.isAlive) continue;
+
+        float alpha = std::clamp(1.0f - (p.life / p.maxLife), 0.0f, 1.0f);
+
+        if (p.isSmoke) {
+            if (visionMode == VisionMode::FLIR_THERMAL) {
+                DrawSphere(p.position, p.size, Fade(Color{ 80, 50, 35, 255 }, alpha * 0.30f));
+            } else if (visionMode == VisionMode::NVG_GREEN) {
+                DrawSphere(p.position, p.size, Fade(Color{ 30, 80, 40, 255 }, alpha * 0.25f));
+            } else {
+                DrawSphere(p.position, p.size, Fade(DARKGRAY, alpha * 0.25f));
+            }
+        } else {
+            if (visionMode == VisionMode::FLIR_THERMAL) {
+                // Intense White-Hot Thermal Emitter Signature
+                DrawSphere(p.position, p.size * 0.7f, Color{ 255, 255, 255, 255 });
+                DrawSphere(p.position, p.size * 1.5f, Fade(Color{ 255, 240, 180, 255 }, alpha * 0.85f));
+                DrawCircle3D(p.position, p.size * 3.0f, Vector3{ 1, 0, 0 }, 90.0f, Fade(Color{ 255, 130, 20, 255 }, alpha * 0.60f));
+            } else if (visionMode == VisionMode::NVG_GREEN) {
+                // NVG High-Intensity Phosphor Flare Bloom
+                DrawSphere(p.position, p.size * 0.65f, Color{ 240, 255, 240, 255 });
+                DrawSphere(p.position, p.size * 1.4f, Fade(Color{ 140, 255, 160, 255 }, alpha * 0.80f));
+                DrawCircle3D(p.position, p.size * 2.6f, Vector3{ 1, 0, 0 }, 90.0f, Fade(Color{ 60, 255, 100, 255 }, alpha * 0.45f));
+            } else {
+                // Normal Daylight: Sparking Golden / Magnesium Combustion
+                DrawSphere(p.position, p.size * 0.65f, WHITE);
+                DrawSphere(p.position, p.size * 1.25f, Fade(GOLD, alpha * 0.90f));
+                DrawSphere(p.position, p.size * 2.1f, Fade(ORANGE, alpha * 0.45f));
+                DrawCircle3D(p.position, p.size * 2.6f, Vector3{ 1, 0, 0 }, 90.0f, Fade(YELLOW, alpha * 0.40f));
+            }
+        }
+    }
+}
+
 // ==========================================
 // RECON DRONE IMPLEMENTATION
 // ==========================================
@@ -390,6 +542,8 @@ ReconDrone::ReconDrone(int id, Vector3 dockPos, int startingSector)
 }
 
 void ReconDrone::Update(FleetContext& ctx, float dt) {
+    UpdateFlares(dt);
+
     if (isDestroyed) {
         if (position.y > 0.4f) {
             position.y += velocity.y * dt;
@@ -586,6 +740,8 @@ TaskForceDrone::TaskForceDrone(int id, Vector3 dockPos)
 }
 
 void TaskForceDrone::Update(FleetContext& ctx, float dt) {
+    UpdateFlares(dt);
+
     if (isDestroyed) {
         if (position.y > 0.4f) {
             position.y += velocity.y * dt;
@@ -603,6 +759,10 @@ void TaskForceDrone::Update(FleetContext& ctx, float dt) {
     }
 
     // Critical Emergency Trigger
+    if (hp <= (maxHp * 0.5f) && flareCooldown <= 0.0f) {
+        DeployFlares(&ctx);
+    }
+
     if (fuel <= 12.0f || (ammo <= 0.0f && state != DroneState::RESUPPLYING_IN_AIR) || hp <= 25.0f) {
         if (state != DroneState::RETURNING_TO_BASE) {
             state = DroneState::RETURNING_TO_BASE;
@@ -888,6 +1048,8 @@ void SupportDrone::ResetToDock() {
 }
 
 void SupportDrone::Update(FleetContext& ctx, float dt) {
+    UpdateFlares(dt);
+
     if (isDestroyed) {
         if (position.y > 0.4f) {
             position.y += velocity.y * dt;

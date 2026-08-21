@@ -293,7 +293,20 @@ void FleetHUD::DrawDroneInspector2D(const std::vector<std::unique_ptr<Drone>>& d
 
         DrawCustomText(TextFormat("Range to Base: %.1fm | Latency: %.0fms | Bitrate: %.1f Mb/s", d->distanceFromBase, d->telemetryLatencyMs, d->bitrateMbps), panelX + 20, rfY + 20, 11.0f, LIGHTGRAY);
 
-        int logHeaderY = rfY + 44;
+        // DEFENSIVE COUNTERMEASURES (FLARE / CHAFF) STATUS
+        int cmY = rfY + 36;
+        DrawCustomText("DEFENSE FLARES:", panelX + 20, cmY, 13.0f, GOLD);
+        if (d->isDestroyed) {
+            DrawCustomText("[ OFFLINE // CASUALTY ]", panelX + 150, cmY, 12.0f, RED);
+        } else if (d->flareAlertTimer > 0.0f) {
+            DrawCustomText(TextFormat("[ ACTIVE // DEPLOYED (%.1fs) ]", d->flareAlertTimer), panelX + 150, cmY, 12.0f, YELLOW);
+        } else if (d->flareCooldown > 0.0f) {
+            DrawCustomText(TextFormat("[ RECHARGING (%.1fs) ]", d->flareCooldown), panelX + 150, cmY, 12.0f, ORANGE);
+        } else {
+            DrawCustomText("[ READY // AUTO-DEFENSE (HOTKEY: X) ]", panelX + 150, cmY, 12.0f, LIME);
+        }
+
+        int logHeaderY = cmY + 24;
         DrawCustomText("INDIVIDUAL FLIGHT ACTION LOGS:", panelX + 20, logHeaderY, 14.0f, LIME);
         DrawLine(panelX + 20, logHeaderY + 18, panelX + panelW - 20, logHeaderY + 18, LIME);
 
@@ -475,7 +488,16 @@ void FleetHUD::DrawPiPCam2D(const std::vector<std::unique_ptr<Drone>>& drones, c
                 DrawRectangle(viewX, ry, viewW, rh, glitchCol);
             }
         }
-        if (drone.snrDb < 15.0f && ((int)(GetTime() * 3)) % 2 == 0) {
+        if (drone.flareAlertTimer > 0.0f) {
+            bool cmBlink = ((int)(GetTime() * 4.0f)) % 2 == 0;
+            int cmW = 200;
+            int cmH = 18;
+            int cmX = viewX + (viewW - cmW) / 2;
+            int cmY = viewY + 7;
+            DrawRectangle(cmX, cmY, cmW, cmH, Color{ 36, 20, 4, 225 });
+            DrawRectangleLines(cmX, cmY, cmW, cmH, cmBlink ? GOLD : ORANGE);
+            DrawCustomText("▲ FLARES / CM DEPLOYED ▲", cmX + 18, cmY + 3, 10.0f, cmBlink ? YELLOW : GOLD);
+        } else if (drone.snrDb < 15.0f && ((int)(GetTime() * 3)) % 2 == 0) {
             DrawCustomText("! LOW SNR LINK !", viewX + viewW / 2 - 45, viewY + 8, 10.0f, RED);
         }
     }
@@ -609,6 +631,17 @@ void FleetHUD::DrawFPVSignalOverlay2D(const Drone& activeDrone) const {
             DrawRectangleLines((int)((screenWidth - warnW) / 2.0f) - 10, osdY + osdH + 6, (int)warnW + 20, 22, RED);
             DrawCustomText(warnStr, (screenWidth - warnW) / 2.0f, osdY + osdH + 10, 13.0f, RED);
         }
+    }
+
+    // Blinking warning banner if Flares / Countermeasures active
+    if (activeDrone.flareAlertTimer > 0.0f) {
+        bool flareBlink = ((int)(GetTime() * 4.0f)) % 2 == 0;
+        const char* fStr = "▲ COUNTERMEASURES ACTIVE // DEFENSIVE FLARES DEPLOYED (IR DECOY) ▲";
+        float fW = fontLoaded ? MeasureTextEx(customFont, fStr, 13.0f, 1.0f).x : (float)MeasureText(fStr, 13);
+        int bannerY = (activeDrone.snrDb < 15.0f) ? (osdY + osdH + 32) : (osdY + osdH + 6);
+        DrawRectangle((int)((screenWidth - fW) / 2.0f) - 12, bannerY, (int)fW + 24, 22, Color{ 36, 20, 4, 235 });
+        DrawRectangleLines((int)((screenWidth - fW) / 2.0f) - 12, bannerY, (int)fW + 24, 22, flareBlink ? GOLD : ORANGE);
+        DrawCustomText(fStr, (screenWidth - fW) / 2.0f, bannerY + 4, 13.0f, flareBlink ? YELLOW : GOLD);
     }
 }
 

@@ -15,6 +15,7 @@ AudioManager::AudioManager() : initialized(false) {
     soundHurt = { 0 };
     soundLevelUp = { 0 };
     soundClick = { 0 };
+    soundFlare = { 0 };
 }
 
 AudioManager::~AudioManager() {
@@ -33,6 +34,7 @@ void AudioManager::Init() {
     soundHurt = CreateHurtSound();
     soundLevelUp = CreateLevelUpSound();
     soundClick = CreateClickSound();
+    soundFlare = CreateFlareSound();
 
     initialized = true;
 }
@@ -46,6 +48,7 @@ void AudioManager::Close() {
     UnloadSound(soundHurt);
     UnloadSound(soundLevelUp);
     UnloadSound(soundClick);
+    UnloadSound(soundFlare);
 
     CloseAudioDevice();
     initialized = false;
@@ -240,4 +243,44 @@ void AudioManager::PlayLevelUp() {
 
 void AudioManager::PlayClick() {
     if (initialized && soundClick.stream.buffer != NULL) PlaySound(soundClick);
+}
+
+Sound AudioManager::CreateFlareSound() {
+    int sampleRate = 44100;
+    int durationSamples = (int)(sampleRate * 0.32f); // 0.32 sec
+    short *data = (short*)malloc(durationSamples * sizeof(short));
+
+    for (int i = 0; i < durationSamples; i++) {
+        float t = (float)i / sampleRate;
+        float progress = (float)i / durationSamples;
+
+        // Stage 1: Fast pneumatic ejection whoosh / pop (first 25% of duration)
+        float popFreq = 650.0f * (1.0f - progress * 2.8f);
+        if (popFreq < 120.0f) popFreq = 120.0f;
+        float popSine = sinf(2.0f * PI * popFreq * t);
+        float popEnv = (progress < 0.25f) ? (1.0f - progress / 0.25f) : 0.0f;
+
+        // Stage 2: Sizzling magnesium combustion / hiss
+        float noise = ((float)rand() / (float)RAND_MAX) * 2.0f - 1.0f;
+        float hissMod = sinf(2.0f * PI * 1800.0f * t) * 0.5f + 0.5f;
+        float hissEnv = (1.0f - progress) * (progress > 0.08f ? 1.0f : progress / 0.08f);
+
+        float value = (popSine * 0.45f * popEnv) + (noise * hissMod * 0.55f * hissEnv);
+        data[i] = (short)(value * 29000.0f);
+    }
+
+    Wave wave = { 0 };
+    wave.frameCount = durationSamples;
+    wave.sampleRate = sampleRate;
+    wave.sampleSize = 16;
+    wave.channels = 1;
+    wave.data = data;
+
+    Sound s = LoadSoundFromWave(wave);
+    UnloadWave(wave);
+    return s;
+}
+
+void AudioManager::PlayFlare() {
+    if (initialized && soundFlare.stream.buffer != NULL) PlaySound(soundFlare);
 }

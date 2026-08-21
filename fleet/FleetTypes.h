@@ -43,6 +43,17 @@ enum class VisionMode {
 };
 
 // --- DATA STRUCTURES ---
+struct CountermeasureParticle {
+    Vector3 position = { 0.0f, 0.0f, 0.0f };
+    Vector3 velocity = { 0.0f, 0.0f, 0.0f };
+    Color color = WHITE;
+    float life = 0.0f;
+    float maxLife = 1.5f;
+    float size = 0.28f;
+    bool isSmoke = false;
+    bool isAlive = true;
+};
+
 struct Enemy {
     int id = 0;
     Vector3 position = { 0.0f, 0.0f, 0.0f };
