@@ -20,6 +20,7 @@ public:
     void EmitPickupBurst(Vector3 pos);
     void EmitDashTrail(Vector3 pos, Vector3 dir);
     void EmitLandingDust(Vector3 pos);
+    void EmitDownwashDust(Vector3 pos, float intensity = 1.0f);
     void EmitImpact(Vector3 pos, Color color);
 
     void Update(float dt);

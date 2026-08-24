@@ -56,12 +56,16 @@ public:
     float flareCooldown = 0.0f;
     float flareAlertTimer = 0.0f;
 
+    // Atmospheric Wind & Rotor Downwash Dust FX (Day 7)
+    std::vector<DownwashParticle> downwashParticles;
+
     Drone(int id, DroneRole role);
     virtual ~Drone() = default;
 
     void LogAction(const std::string& msg);
     void DeployFlares(FleetContext* ctx = nullptr);
     void UpdateFlares(float dt);
+    void UpdateDownwash(float dt);
     virtual void Update(FleetContext& ctx, float dt) = 0;
     virtual void Draw3D(VisionMode visionMode = VisionMode::NORMAL) const;
     virtual void ResetToDock();
@@ -72,6 +76,7 @@ protected:
     void DrawNavigationLEDs(VisionMode visionMode) const;
     void DrawGroundSpotlight(VisionMode visionMode) const;
     void DrawFlares(VisionMode visionMode) const;
+    void DrawDownwashFX(VisionMode visionMode) const;
 };
 
 // --- RECON DRONE (SCOUT / HIGH ALTITUDE SWEEP) ---

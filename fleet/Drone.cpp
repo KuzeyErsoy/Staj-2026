@@ -51,6 +51,7 @@ void Drone::ResetToDock() {
     flareParticles.clear();
     flareCooldown = 0.0f;
     flareAlertTimer = 0.0f;
+    downwashParticles.clear();
 }
 
 void Drone::UpdateMovementPhysics(float targetSpeed, float dt) {
@@ -236,6 +237,9 @@ void Drone::Draw3D(VisionMode visionMode) const {
 
     // 3. Defensive Magnesium Flares & Chaff Particles
     DrawFlares(visionMode);
+
+    // 4. Dynamic Atmosphere, Wind & Rotor Downwash Dust FX (Day 7)
+    DrawDownwashFX(visionMode);
 }
 
 void Drone::DrawNavigationLEDs(VisionMode visionMode) const {
@@ -386,6 +390,7 @@ void Drone::DeployFlares(FleetContext* ctx) {
 
     LogAction("Deployed Defensive Magnesium Flare Salvo (Countermeasure)");
     if (ctx) {
+        ctx->telemetry.flaresFiredCount += 16;
         char buf[128];
         snprintf(buf, sizeof(buf), "[DEFENSE] Drone #%d DEPLOYED FLARES (Hostile Lock Decoyed)!", id);
         ctx->LogTerminal(buf);
@@ -523,6 +528,142 @@ void Drone::DrawFlares(VisionMode visionMode) const {
     }
 }
 
+void Drone::UpdateDownwash(float dt) {
+    if (isDestroyed) {
+        if (!downwashParticles.empty()) {
+            for (auto& p : downwashParticles) {
+                p.life += dt;
+                if (p.life >= p.maxLife) p.isAlive = false;
+                p.position = Vector3Add(p.position, Vector3Scale(p.velocity, dt));
+            }
+            downwashParticles.erase(std::remove_if(downwashParticles.begin(), downwashParticles.end(), [](const DownwashParticle& p) {
+                return !p.isAlive;
+            }), downwashParticles.end());
+        }
+        return;
+    }
+
+    // Dynamic Atmospheric Wind Vector
+    Vector3 wind = { sinf((float)GetTime() * 0.5f) * 3.0f, 0.0f, cosf((float)GetTime() * 0.3f) * 2.0f };
+
+    // Downwash generation when drone is low altitude (y < 8.0m)
+    if (position.y < 8.0f) {
+        float downwashIntensity = std::clamp((8.0f - position.y) / 8.0f, 0.0f, 1.0f);
+        
+        // Spawn radial ground dust particles
+        int spawnCount = (downwashIntensity > 0.4f) ? 2 : 1;
+        if (state == DroneState::IDLE_AT_BASE) spawnCount = 0; // Resting on dock
+
+        for (int i = 0; i < spawnCount; i++) {
+            if (downwashParticles.size() >= 80) break;
+
+            float ang = (float)GetRandomValue(0, 360) * DEG2RAD;
+            float r = (float)GetRandomValue(8, 28) * 0.1f * (1.0f + (1.0f - downwashIntensity));
+            float radSpeed = (float)GetRandomValue(20, 45) * 0.1f * downwashIntensity;
+
+            DownwashParticle p;
+            p.position = Vector3{
+                position.x + cosf(ang) * r,
+                0.04f + (float)GetRandomValue(0, 20) * 0.01f,
+                position.z + sinf(ang) * r
+            };
+
+            Vector3 radialDir = Vector3{ cosf(ang), (float)GetRandomValue(5, 30) * 0.02f * downwashIntensity, sinf(ang) };
+            p.velocity = Vector3Add(
+                Vector3Scale(radialDir, radSpeed * 2.8f),
+                Vector3Add(Vector3Scale(wind, 0.85f), Vector3Scale(velocity, 0.25f))
+            );
+
+            p.life = 0.0f;
+            p.maxLife = 0.5f + (float)GetRandomValue(20, 60) * 0.01f;
+            p.size = 0.14f + (float)GetRandomValue(0, 16) * 0.01f;
+            p.color = Color{ 210, 185, 140, 255 };
+            p.isAlive = true;
+
+            downwashParticles.push_back(p);
+        }
+    }
+
+    // Update active downwash dust particles
+    for (auto& p : downwashParticles) {
+        if (!p.isAlive) continue;
+
+        p.life += dt;
+        if (p.life >= p.maxLife) {
+            p.isAlive = false;
+            continue;
+        }
+
+        p.position = Vector3Add(p.position, Vector3Scale(p.velocity, dt));
+        p.velocity = Vector3Scale(p.velocity, 0.90f); // Ground aerodynamic drag
+        p.velocity = Vector3Add(p.velocity, Vector3Scale(wind, dt * 1.8f)); // Atmospheric wind drift
+        p.size += dt * 0.28f; // Dust cloud expands as it dissipates
+    }
+
+    downwashParticles.erase(std::remove_if(downwashParticles.begin(), downwashParticles.end(), [](const DownwashParticle& p) {
+        return !p.isAlive;
+    }), downwashParticles.end());
+}
+
+void Drone::DrawDownwashFX(VisionMode visionMode) const {
+    if (isDestroyed || (position.y >= 8.0f && downwashParticles.empty())) return;
+
+    float downwashAlpha = std::clamp((8.0f - position.y) / 8.0f, 0.0f, 1.0f);
+    Vector3 wind = { sinf((float)GetTime() * 0.5f) * 3.0f, 0.0f, cosf((float)GetTime() * 0.3f) * 2.0f };
+
+    if (position.y < 8.0f && state != DroneState::IDLE_AT_BASE) {
+        // Ground epicenter with atmospheric wind shear offset
+        float windShear = (1.0f - downwashAlpha * 0.5f);
+        Vector3 groundCenter = Vector3{
+            position.x + wind.x * 0.25f * windShear,
+            0.03f,
+            position.z + wind.z * 0.25f * windShear
+        };
+
+        float maxRadius = 3.0f + (1.0f - downwashAlpha) * 4.5f;
+
+        // 1. Concentric Radial Ground Dust Shockwaves
+        for (int i = 0; i < 3; i++) {
+            float phase = fmodf((float)GetTime() * 3.2f + (float)i * 0.33f + (float)id * 0.4f, 1.0f);
+            float ringRadius = 0.8f + phase * maxRadius;
+            float ringAlpha = downwashAlpha * (1.0f - phase) * 0.60f;
+
+            Color ringCol = Color{ 210, 185, 140, 255 };
+            if (visionMode == VisionMode::FLIR_THERMAL) {
+                ringCol = Color{ 240, 130, 30, 255 }; // Thermal ground friction heat wash
+            } else if (visionMode == VisionMode::NVG_GREEN) {
+                ringCol = Color{ 80, 220, 110, 255 }; // Phosphor illuminated dust wave
+            }
+
+            DrawCircle3D(groundCenter, ringRadius, Vector3{ 1, 0, 0 }, 90.0f, Fade(ringCol, ringAlpha * 0.45f));
+            DrawCircle3D(groundCenter, ringRadius * 0.88f, Vector3{ 1, 0, 0 }, 90.0f, Fade(ringCol, ringAlpha * 0.18f));
+        }
+
+        // 2. High-Pressure Downward Rotor Core Ground Footprint
+        Color coreCol = Color{ 190, 160, 120, 255 };
+        if (visionMode == VisionMode::FLIR_THERMAL) coreCol = Color{ 255, 150, 40, 255 };
+        else if (visionMode == VisionMode::NVG_GREEN) coreCol = Color{ 100, 240, 130, 255 };
+
+        DrawCircle3D(groundCenter, 2.2f * downwashAlpha + 0.5f, Vector3{ 1, 0, 0 }, 90.0f, Fade(coreCol, downwashAlpha * 0.25f));
+    }
+
+    // 3. Dynamic Micro-Particle Swirl Cloud
+    for (const auto& p : downwashParticles) {
+        if (!p.isAlive) continue;
+
+        float alpha = std::clamp(1.0f - (p.life / p.maxLife), 0.0f, 1.0f) * downwashAlpha;
+        Color pCol = p.color;
+
+        if (visionMode == VisionMode::FLIR_THERMAL) {
+            pCol = Color{ 245, 140, 35, 255 };
+        } else if (visionMode == VisionMode::NVG_GREEN) {
+            pCol = Color{ 70, 210, 100, 255 };
+        }
+
+        DrawSphere(p.position, p.size, Fade(pCol, alpha * 0.55f));
+    }
+}
+
 // ==========================================
 // RECON DRONE IMPLEMENTATION
 // ==========================================
@@ -543,6 +684,7 @@ ReconDrone::ReconDrone(int id, Vector3 dockPos, int startingSector)
 
 void ReconDrone::Update(FleetContext& ctx, float dt) {
     UpdateFlares(dt);
+    UpdateDownwash(dt);
 
     if (isDestroyed) {
         if (position.y > 0.4f) {
@@ -572,6 +714,7 @@ void ReconDrone::Update(FleetContext& ctx, float dt) {
     }
 
     fuel -= dt * 0.8f;
+    ctx.telemetry.totalFuelBurned += dt * 0.8f;
 
     // --- LOW FUEL: INITIATE AERIAL RENDEZVOUS WITH SUPPORT ---
     if (fuel <= 60.0f && state != DroneState::RETURNING_TO_BASE && state != DroneState::RESUPPLYING_IN_AIR) {
@@ -741,6 +884,7 @@ TaskForceDrone::TaskForceDrone(int id, Vector3 dockPos)
 
 void TaskForceDrone::Update(FleetContext& ctx, float dt) {
     UpdateFlares(dt);
+    UpdateDownwash(dt);
 
     if (isDestroyed) {
         if (position.y > 0.4f) {
@@ -756,6 +900,7 @@ void TaskForceDrone::Update(FleetContext& ctx, float dt) {
 
     if (state != DroneState::IDLE_AT_BASE) {
         fuel -= dt * 1.0f;
+        ctx.telemetry.totalFuelBurned += dt * 1.0f;
     }
 
     // Critical Emergency Trigger
@@ -954,6 +1099,7 @@ void TaskForceDrone::Update(FleetContext& ctx, float dt) {
                     ammo -= 2.0f;
                     Vector3 launchPos = Vector3{ position.x, position.y - 0.4f, position.z };
                     ctx.missileSystem.LaunchMissile(id, launchPos, closestEnemy->position, targetCluster->id, closestEnemy->id);
+                    ctx.telemetry.missilesFiredCount++;
                 }
 
                 closestEnemy->panicTimer = 3.0f;
@@ -1049,6 +1195,7 @@ void SupportDrone::ResetToDock() {
 
 void SupportDrone::Update(FleetContext& ctx, float dt) {
     UpdateFlares(dt);
+    UpdateDownwash(dt);
 
     if (isDestroyed) {
         if (position.y > 0.4f) {
@@ -1068,6 +1215,7 @@ void SupportDrone::Update(FleetContext& ctx, float dt) {
 
     if (state != DroneState::IDLE_AT_BASE) {
         fuel -= dt * 0.7f;
+        ctx.telemetry.totalFuelBurned += dt * 0.7f;
     }
 
     // =========================================================================
@@ -1279,6 +1427,7 @@ void SupportDrone::Update(FleetContext& ctx, float dt) {
                     recoveringDroneId = -1;
                     isResupplyBeamActive = false;
                     if (ctx.telemetry.destroyedDronesCount > 0) ctx.telemetry.destroyedDronesCount--;
+                    ctx.telemetry.dronesRepairedCount++;
 
                     char buf[160];
                     snprintf(buf, sizeof(buf), "[SAR RECOVERY] Support #%d RECOVERED & REBOOTED Task Force #%d at crash site (HP 100%%)!", id, downedDrone->id);

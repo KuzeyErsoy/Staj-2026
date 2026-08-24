@@ -115,7 +115,12 @@ Düşmanlar 2 gruba ayrılır. Merkez, haritadaki düşman sayısına göre kaç
 
 - **`P` veya `SPACE`**: Simülasyonu Durdurur / Başlatır.
 - **`+` / `-`**: Simülasyon Hızını Artırır / Azaltır ($2x \to 4x \to 8x$).
+- **`F7` / `G`**: Taktik Görev Sonu Değerlendirme & Skor Karnesi (Debriefing Panel).
+- **`X`**: Seçili drone'dan Magnezyum Savunma Fişeği (Flare) fırlatır.
+- **`F6` / `V`**: Canlı PiP Mini Burun Kamerasını açar / kapatır (`[` / `]` ile hedef seçilir).
+- **`T` / `N`**: FLIR Termal (White-Hot) / NVG Gen-3 Yeşil Fosfor Gece Görüş Vizörleri.
 - **`K`**: Ekrana **Silahlı (Kırmızı)** Düşman Grubu ekler.
 - **`L`**: Ekrana **Silahsız (Turuncu)** Düşman Grubu ekler.
 - **`J`**: Ekrana **Ağır Karışık Düşman Grubu** ekler.
-- **`TAB`**: Drone'ların gözünden bakmak için kameraları değiştirir.
+- **`TAB` / `0..9`**: Drone'ların gözünden bakmak için kameraları değiştirir.
+- **`I`**: Seçili drone'un detaylı Telemetri ve Uçuş Denetçisi panelini açar.

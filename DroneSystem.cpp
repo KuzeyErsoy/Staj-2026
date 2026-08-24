@@ -88,8 +88,18 @@ void DroneSystemManager::Init() {
     telemetry.terminalLogs.clear();
     telemetry.eliminatedTargetsCount = 0;
     telemetry.destroyedDronesCount = 0;
+    telemetry.missionTimeSecs = 0.0f;
+    telemetry.missilesFiredCount = 0;
+    telemetry.flaresFiredCount = 0;
+    telemetry.totalFuelBurned = 0.0f;
+    telemetry.dronesRepairedCount = 0;
+    telemetry.eliminatedClustersCount = 0;
+    telemetry.operationWave = 1;
+    telemetry.isDebriefingOpen = false;
+    telemetry.waveClearedAnnounced = false;
     timeScale = 1.0f;
     isPaused = false;
+    fleetHUD.SetDebriefingPanel(false);
 
     LogTerminal("[TACTICAL COMMAND] 9-Drone Military Autonomous Fleet Initialized (OOP Architecture).");
     LogTerminal("[THREAT FORMULA] Magnitude = (Armed*0.5 + Unarmed*0.25) [Halved Ratios]");
@@ -99,7 +109,9 @@ void DroneSystemManager::Init() {
 }
 
 void DroneSystemManager::UpdateFleetCamera(Camera3D& camera, float dt) {
-    fleetCamera.Update(camera, drones, dt);
+    if (!fleetHUD.IsMapFullscreen()) {
+        fleetCamera.Update(camera, drones, dt);
+    }
     if (fleetCamera.GetActiveCameraMode() >= 1 && fleetCamera.GetActiveCameraMode() <= 9) {
         fleetHUD.SelectInspectorDrone(fleetCamera.GetActiveCameraMode());
     }
@@ -128,10 +140,25 @@ void DroneSystemManager::UpdateTelemetry() {
 }
 
 void DroneSystemManager::Update(float dt) {
-    // Hotkeys
-    if (IsKeyPressed(KEY_P) || IsKeyPressed(KEY_SPACE)) {
-        TogglePause();
+    // Debriefing Hotkeys & Wave Progression
+    if (fleetHUD.IsDebriefingActive()) {
+        if (IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_ENTER)) {
+            StartNextWave();
+            return;
+        }
+        if (IsKeyPressed(KEY_F7) || IsKeyPressed(KEY_G)) {
+            ToggleDebriefingPanel();
+            return;
+        }
+    } else {
+        if (IsKeyPressed(KEY_F7) || IsKeyPressed(KEY_G)) {
+            ToggleDebriefingPanel();
+        }
+        if (IsKeyPressed(KEY_P) || IsKeyPressed(KEY_SPACE)) {
+            TogglePause();
+        }
     }
+
     if (IsKeyPressed(KEY_EQUAL) || IsKeyPressed(KEY_KP_ADD) || IsKeyPressed(KEY_RIGHT)) {
         IncreaseSpeed();
     }
@@ -208,6 +235,8 @@ void DroneSystemManager::Update(float dt) {
     float effectiveDt = isPaused ? 0.0f : dt * timeScale;
     if (effectiveDt <= 0.0f) return;
 
+    telemetry.missionTimeSecs += effectiveDt;
+
     // Create FleetContext
     FleetContext ctx{
         drones,
@@ -231,6 +260,60 @@ void DroneSystemManager::Update(float dt) {
 
     // 4. Update Telemetry counters
     UpdateTelemetry();
+
+    // 5. Automatic Operation Wave Debriefing Check
+    bool allClustersCleared = true;
+    for (const auto& c : clusterManager.GetClusters()) {
+        if (c.status != ClusterStatus::CLEARED) {
+            allClustersCleared = false;
+            break;
+        }
+    }
+    if (allClustersCleared && telemetry.eliminatedClustersCount > 0 && !telemetry.waveClearedAnnounced) {
+        telemetry.waveClearedAnnounced = true;
+        fleetHUD.SetDebriefingPanel(true);
+        LogTerminal("[DEBRIEFING] Operation Wave #" + std::to_string(telemetry.operationWave) + " ACCOMPLISHED! All hostile threats eliminated.");
+        if (IsAudioDeviceReady()) AudioManager::Instance().PlayLevelUp();
+    }
+}
+
+void DroneSystemManager::ToggleFullscreenMap() {
+    fleetHUD.ToggleFullscreenMap();
+    if (fleetHUD.IsMapFullscreen()) {
+        EnableCursor();
+        LogTerminal("[TACTICAL RADAR] Fullscreen 1000x1000m Theater Grid opened (Filters [1-5], SNR Rings & Target Intel active).");
+    } else {
+        DisableCursor();
+        LogTerminal("[TACTICAL RADAR] Fullscreen map closed. Restored 3D Command View.");
+    }
+    if (IsAudioDeviceReady()) AudioManager::Instance().PlayClick();
+}
+
+void DroneSystemManager::ToggleDebriefingPanel() {
+    fleetHUD.ToggleDebriefingPanel();
+    LogTerminal(fleetHUD.IsDebriefingActive() ? "[DEBRIEFING] Tactical Mission Debriefing Report opened." : "[DEBRIEFING] Debriefing closed. Resuming live fleet operations.");
+    if (IsAudioDeviceReady()) AudioManager::Instance().PlayClick();
+}
+
+void DroneSystemManager::StartNextWave() {
+    telemetry.operationWave++;
+    telemetry.waveClearedAnnounced = false;
+    fleetHUD.SetDebriefingPanel(false);
+
+    int armedCount = 6 + telemetry.operationWave * 2;
+    int unarmedCount = 4 + telemetry.operationWave;
+    clusterManager.SpawnCustomCluster(true, armedCount);
+    clusterManager.SpawnCustomCluster(false, unarmedCount);
+    if (telemetry.operationWave >= 3) {
+        clusterManager.SpawnCustomCluster(true, armedCount + 2);
+    }
+
+    char buf[160];
+    snprintf(buf, sizeof(buf), "[NEXT WAVE] Operation Wave #%d INITIATED! Multiple hostile threats deployed (%d Armed, %d Unarmed).",
+             telemetry.operationWave, armedCount, unarmedCount);
+    LogTerminal(buf);
+
+    if (IsAudioDeviceReady()) AudioManager::Instance().PlayLevelUp();
 }
 
 void DroneSystemManager::TogglePiPWindow() {

@@ -387,8 +387,12 @@ int main() {
         fleetManager.ToggleAllPanels();
 
       if (IsKeyPressed(KEY_ESCAPE)) {
-        AudioManager::Instance().PlayClick();
-        currentState = STATE_MENU;
+        if (fleetManager.IsMapFullscreen()) {
+          fleetManager.ToggleFullscreenMap();
+        } else {
+          AudioManager::Instance().PlayClick();
+          currentState = STATE_MENU;
+        }
       }
       break;
     }

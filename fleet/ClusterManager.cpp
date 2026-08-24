@@ -79,8 +79,9 @@ void ClusterManager::Update(FleetContext& ctx, float dt) {
         if (c.status != ClusterStatus::CLEARED) {
             if (c.remainingMagnitude <= 0) {
                 c.status = ClusterStatus::CLEARED;
+                ctx.telemetry.eliminatedClustersCount++;
                 char buf[128];
-                snprintf(buf, sizeof(buf), "[TACTICAL COMMAND] Hostile Cluster #%d CLEARED! Relocating spawner...", c.id);
+                snprintf(buf, sizeof(buf), "[TACTICAL COMMAND] Hostile Cluster #%d CLEARED! (Total Cleared: %d)", c.id, ctx.telemetry.eliminatedClustersCount);
                 ctx.LogTerminal(buf);
                 pendingSpawns++;
             }

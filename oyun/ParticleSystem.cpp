@@ -70,6 +70,31 @@ void ParticleSystem::EmitLandingDust(Vector3 pos) {
     }
 }
 
+void ParticleSystem::EmitDownwashDust(Vector3 pos, float intensity) {
+    Vector3 wind = { sinf((float)GetTime() * 0.5f) * 3.0f, 0.0f, cosf((float)GetTime() * 0.3f) * 2.0f };
+    int count = (int)(10.0f * intensity);
+    for (int i = 0; i < count; i++) {
+        Particle p;
+        float ang = ((float)GetRandomValue(0, 360)) * (3.14159f / 180.0f);
+        float dist = ((float)GetRandomValue(10, 35) / 10.0f);
+        p.position = Vector3{ pos.x + cosf(ang) * dist, 0.05f, pos.z + sinf(ang) * dist };
+        
+        float speed = ((float)GetRandomValue(20, 50) / 10.0f) * intensity;
+        p.velocity = Vector3{
+            cosf(ang) * speed + wind.x * 0.8f,
+            ((float)GetRandomValue(5, 25) / 10.0f) * intensity,
+            sinf(ang) * speed + wind.z * 0.8f
+        };
+        p.color = Color{ 210, 185, 140, 255 };
+        p.size = (float)GetRandomValue(18, 32) / 100.0f;
+        p.lifetime = 0.5f + ((float)GetRandomValue(0, 40) / 100.0f);
+        p.maxLifetime = p.lifetime;
+        p.isCube = false;
+
+        particles.push_back(p);
+    }
+}
+
 void ParticleSystem::EmitImpact(Vector3 pos, Color color) {
     for (int i = 0; i < 15; i++) {
         Particle p;
@@ -89,6 +114,8 @@ void ParticleSystem::EmitImpact(Vector3 pos, Color color) {
 }
 
 void ParticleSystem::Update(float dt) {
+    Vector3 wind = { sinf((float)GetTime() * 0.5f) * 2.0f, 0.0f, cosf((float)GetTime() * 0.3f) * 1.5f };
+
     for (size_t i = 0; i < particles.size(); ) {
         particles[i].lifetime -= dt;
         if (particles[i].lifetime <= 0.0f) {
@@ -99,7 +126,9 @@ void ParticleSystem::Update(float dt) {
             particles[i].position.y += particles[i].velocity.y * dt;
             particles[i].position.z += particles[i].velocity.z * dt;
 
-            // Gravity effect
+            // Wind drift & gravity effect
+            particles[i].velocity.x += wind.x * dt * 0.8f;
+            particles[i].velocity.z += wind.z * dt * 0.8f;
             particles[i].velocity.y -= 4.0f * dt;
             
             // Shrink over lifetime

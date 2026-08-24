@@ -31,7 +31,8 @@ public:
     void ToggleTerminalPanel() { fleetHUD.ToggleTerminalPanel(); }
     void ToggleCameraBanner() { fleetHUD.ToggleCameraBanner(); }
     void ToggleTacticalMap() { fleetHUD.ToggleTacticalMap(); }
-    void ToggleFullscreenMap() { fleetHUD.ToggleFullscreenMap(); }
+    void ToggleFullscreenMap();
+    bool IsMapFullscreen() const { return fleetHUD.IsMapFullscreen(); }
     void ToggleDroneInspector() { fleetHUD.ToggleDroneInspector(); }
     void ToggleAllPanels() { fleetHUD.ToggleAllPanels(); }
     void SelectInspectorDrone(int id) { fleetHUD.SelectInspectorDrone(id); }
@@ -49,6 +50,9 @@ public:
     void SetVisionMode(DroneFleet::VisionMode mode) { fleetHUD.SetVisionMode(mode); }
     DroneFleet::VisionMode GetVisionMode() const { return fleetHUD.GetVisionMode(); }
 
+    // Debriefing Panel & Waves (Day 6)
+    void ToggleDebriefingPanel();
+    void StartNextWave();
 
     // Fleet Accessors
     const DroneFleet::HangarBase& GetHangarBase() const { return hangarBase; }

@@ -2,6 +2,7 @@
 #include "Drone.h"
 #include "FleetCamera.h"
 #include "ClusterManager.h"
+#include "AudioManager.h"
 #include <algorithm>
 #include <cstdio>
 #include <cmath>
@@ -85,62 +86,430 @@ void FleetHUD::ToggleNightVision() {
     }
 }
 
+void FleetHUD::DrawSNRCoverageRings2D(int centerX, int centerY, float scale, bool fullscreen) const {
+    // 200m Ring: Green (Optimal Signal SNR > 25 dB)
+    DrawCircleLines(centerX, centerY, (int)(200 * scale), Fade(LIME, 0.40f));
+    DrawCircleLines(centerX, centerY, (int)(200 * scale) - 1, Fade(LIME, 0.20f));
+
+    // 400m Ring: Yellow (Standard Signal SNR 18-25 dB)
+    DrawCircleLines(centerX, centerY, (int)(400 * scale), Fade(YELLOW, 0.35f));
+    DrawCircleLines(centerX, centerY, (int)(400 * scale) - 1, Fade(YELLOW, 0.18f));
+
+    // 600m Ring: Orange (Degraded Signal SNR 12-18 dB)
+    DrawCircleLines(centerX, centerY, (int)(600 * scale), Fade(ORANGE, 0.30f));
+
+    // 800m Ring: Red (Fringe / Packet Loss SNR < 10 dB)
+    DrawCircleLines(centerX, centerY, (int)(800 * scale), Fade(RED, 0.25f));
+
+    if (fullscreen) {
+        DrawCustomText("200m [SNR 45-25dB OPTIMAL LINK]", (float)(centerX + 12), (float)(centerY - (int)(200 * scale) - 12), 10.0f, Fade(LIME, 0.85f));
+        DrawCustomText("400m [SNR 25-18dB STANDARD LINK]", (float)(centerX + 12), (float)(centerY - (int)(400 * scale) - 12), 10.0f, Fade(YELLOW, 0.85f));
+        DrawCustomText("600m [SNR 18-12dB WEAK / LATENCY]", (float)(centerX + 12), (float)(centerY - (int)(600 * scale) - 12), 10.0f, Fade(ORANGE, 0.85f));
+        DrawCustomText("800m [SNR <10dB PACKET LOSS ZONE]", (float)(centerX + 12), (float)(centerY - (int)(800 * scale) - 12), 10.0f, Fade(RED, 0.85f));
+    }
+}
+
+void FleetHUD::DrawMapFilterBar2D(int barX, int barY, int barW, int barH, const std::vector<std::unique_ptr<Drone>>& drones, const std::vector<EnemyCluster>& clusters) const {
+    int reconCount = 0, tfCount = 0, supCount = 0, totalDrones = 0;
+    for (const auto& d : drones) {
+        if (!d->isDestroyed) {
+            totalDrones++;
+            if (d->role == DroneRole::RECON) reconCount++;
+            else if (d->role == DroneRole::TASK_FORCE) tfCount++;
+            else if (d->role == DroneRole::SUPPORT) supCount++;
+        }
+    }
+    int hostileClusters = 0;
+    for (const auto& c : clusters) {
+        if (c.status != ClusterStatus::CLEARED) hostileClusters++;
+    }
+
+    struct FilterBtn {
+        MapFilterMode mode;
+        const char* label;
+        Color col;
+        int hotkey;
+    };
+
+    FilterBtn btns[5] = {
+        { MapFilterMode::ALL_DRONES, TextFormat("[1] ALL ASSETS (%d)", totalDrones), SKYBLUE, KEY_ONE },
+        { MapFilterMode::RECON_ONLY, TextFormat("[2] RECON SCOUTS (%d)", reconCount), SKYBLUE, KEY_TWO },
+        { MapFilterMode::TASK_FORCE_ONLY, TextFormat("[3] TASK FORCE (%d)", tfCount), ORANGE, KEY_THREE },
+        { MapFilterMode::SUPPORT_ONLY, TextFormat("[4] SUPPORT (%d)", supCount), LIME, KEY_FOUR },
+        { MapFilterMode::HOSTILES_ONLY, TextFormat("[5] HOSTILES (%d)", hostileClusters), RED, KEY_FIVE }
+    };
+
+    Vector2 mousePos = GetMousePosition();
+    bool mouseClicked = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+
+    int btnW = (barW - 40) / 5;
+    int curX = barX;
+
+    for (int i = 0; i < 5; i++) {
+        Rectangle btnRect = { (float)curX, (float)barY, (float)btnW, (float)barH };
+        bool hovered = CheckCollisionPointRec(mousePos, btnRect);
+        bool selected = (activeMapFilter == btns[i].mode);
+
+        if (hovered && mouseClicked) {
+            activeMapFilter = btns[i].mode;
+            if (IsAudioDeviceReady()) AudioManager::Instance().PlayClick();
+        }
+        if (IsKeyPressed(btns[i].hotkey)) {
+            activeMapFilter = btns[i].mode;
+            if (IsAudioDeviceReady()) AudioManager::Instance().PlayClick();
+        }
+
+        Color bgCol = selected ? Color{ 16, 36, 68, 250 } : (hovered ? Color{ 10, 24, 45, 230 } : Color{ 4, 12, 24, 210 });
+        Color borderCol = selected ? btns[i].col : (hovered ? RAYWHITE : Fade(btns[i].col, 0.45f));
+
+        DrawRectangleRec(btnRect, bgCol);
+        DrawRectangleLinesEx(btnRect, selected ? 2.0f : 1.0f, borderCol);
+
+        float textW = fontLoaded ? MeasureTextEx(customFont, btns[i].label, 11.0f, 1.0f).x : (float)MeasureText(btns[i].label, 11);
+        DrawCustomText(btns[i].label, (float)(curX + (btnW - (int)textW) / 2), (float)(barY + (barH - 12) / 2), 11.0f, selected ? RAYWHITE : borderCol);
+
+        curX += btnW + 10;
+    }
+}
+
+void FleetHUD::DrawTargetAnalysisCard2D(int cardX, int cardY, int cardW, int cardH, const EnemyCluster& cluster, const std::vector<std::unique_ptr<Drone>>& drones) const {
+    DrawRectangle(cardX, cardY, cardW, cardH, Color{ 4, 11, 24, 252 });
+    Color frameCol = (cluster.armedCount > 0) ? Color{ 255, 60, 50, 255 } : Color{ 255, 160, 30, 255 };
+    DrawRectangleLines(cardX, cardY, cardW, cardH, frameCol);
+    DrawRectangleLines(cardX + 2, cardY + 2, cardW - 4, cardH - 4, Fade(frameCol, 0.4f));
+
+    // Corner brackets
+    int cLen = 14;
+    DrawLine(cardX - 2, cardY - 2, cardX - 2 + cLen, cardY - 2, frameCol);
+    DrawLine(cardX - 2, cardY - 2, cardX - 2, cardY - 2 + cLen, frameCol);
+    DrawLine(cardX + cardW + 2, cardY - 2, cardX + cardW + 2 - cLen, cardY - 2, frameCol);
+    DrawLine(cardX + cardW + 2, cardY - 2, cardX + cardW + 2, cardY - 2 + cLen, frameCol);
+
+    DrawCustomText("TARGET CLUSTER ANALYSIS", (float)(cardX + 15), (float)(cardY + 12), 14.0f, frameCol);
+    DrawLine(cardX + 15, cardY + 30, cardX + cardW - 15, cardY + 30, Fade(frameCol, 0.5f));
+
+    int cy = cardY + 38;
+    auto DrawRow = [&](const char* label, const char* val, Color col) {
+        DrawCustomText(label, (float)(cardX + 15), (float)cy, 11.0f, LIGHTGRAY);
+        float vW = fontLoaded ? MeasureTextEx(customFont, val, 11.0f, 1.0f).x : (float)MeasureText(val, 11);
+        DrawCustomText(val, (float)(cardX + cardW - 15 - (int)vW), (float)cy, 11.0f, col);
+        cy += 19;
+    };
+
+    DrawRow("Target Identifier:", TextFormat("HOSTILE CLUSTER #%d", cluster.id), frameCol);
+    
+    const char* statStr = (cluster.status == ClusterStatus::UNDETECTED) ? "UNDETECTED // ESTIMATED" :
+                          ((cluster.status == ClusterStatus::REPORTED) ? "CONFIRMED // SCOUTED" : "ENGAGED // COMBAT ACTIVE");
+    Color statCol = (cluster.status == ClusterStatus::UNDETECTED) ? YELLOW : ((cluster.status == ClusterStatus::REPORTED) ? ORANGE : RED);
+    DrawRow("Intelligence Status:", statStr, statCol);
+
+    DrawRow("Grid Coordinates:", TextFormat("X: %+.0fm | Z: %+.0fm", cluster.centerPosition.x, cluster.centerPosition.z), SKYBLUE);
+    float distToBase = Vector3Length(Vector3{ cluster.centerPosition.x, 0.0f, cluster.centerPosition.z });
+    DrawRow("Distance to Base:", TextFormat("%.0f meters", distToBase), RAYWHITE);
+
+    // Threat Breakdown
+    cy += 4;
+    DrawLine(cardX + 15, cy, cardX + cardW - 15, cy, Fade(GRAY, 0.3f));
+    cy += 8;
+    DrawCustomText("THREAT & FORCE ESTIMATION:", (float)(cardX + 15), (float)cy, 11.0f, GOLD);
+    cy += 18;
+
+    DrawRow("Calculated Threat Mag:", TextFormat("%d pts", cluster.calculatedThreatMagnitude), (cluster.calculatedThreatMagnitude >= 15) ? RED : YELLOW);
+    DrawRow("Total Combatants:", TextFormat("%d Units", cluster.remainingMagnitude), RAYWHITE);
+    DrawRow("Armed Attack Drones:", TextFormat("%d Units (0.5x Threat)", cluster.armedCount), RED);
+    DrawRow("Unarmed Logistics Drones:", TextFormat("%d Units (0.25x Threat)", cluster.unarmedCount), ORANGE);
+
+    // Strike Doctrine Recommendation
+    cy += 4;
+    DrawLine(cardX + 15, cy, cardX + cardW - 15, cy, Fade(GRAY, 0.3f));
+    cy += 8;
+    DrawCustomText("RECOMMENDED STRIKE DOCTRINE:", (float)(cardX + 15), (float)cy, 11.0f, LIME);
+    cy += 18;
+
+    const char* doctrineStr = (cluster.armedCount > 6) ? "3x Task Force Pincer + 1x Support Medic" :
+                              ((cluster.armedCount > 0) ? "2x Task Force Pincer Assault Salvo" : "1x Recon Harass / Rapid Intercept");
+    DrawCustomText(doctrineStr, (float)(cardX + 15), (float)cy, 10.0f, RAYWHITE);
+    cy += 22;
+
+    // Assigned Assets
+    DrawCustomText("DISPATCHED FLEET ASSETS:", (float)(cardX + 15), (float)cy, 11.0f, SKYBLUE);
+    cy += 18;
+    int assignedCount = 0;
+    for (const auto& d : drones) {
+        if (d->assignedClusterId == cluster.id && !d->isDestroyed) {
+            assignedCount++;
+            float dist = Vector3Distance(d->position, cluster.centerPosition);
+            const char* rStr = (d->role == DroneRole::TASK_FORCE) ? "TF" : ((d->role == DroneRole::SUPPORT) ? "SUP" : "REC");
+            DrawCustomText(TextFormat("• Drone #%d [%s] - Range: %.0fm (ETA ~%.0fs)", d->id, rStr, dist, dist / 25.0f), (float)(cardX + 18), (float)cy, 10.0f, LIME);
+            cy += 18;
+        }
+    }
+    if (assignedCount == 0) {
+        DrawCustomText("• No drones assigned (Standing by)", (float)(cardX + 18), (float)cy, 10.0f, GRAY);
+        cy += 18;
+    }
+
+    // Close button prompt
+    DrawLine(cardX + 15, cardY + cardH - 30, cardX + cardW - 15, cardY + cardH - 30, Fade(frameCol, 0.4f));
+    DrawCustomText("[X] / [Right-Click] Deselect Target Card", (float)(cardX + 15), (float)(cardY + cardH - 22), 10.0f, GOLD);
+}
+
+void FleetHUD::DrawMapDroneQuickCard2D(int cardX, int cardY, int cardW, int cardH, const Drone& drone) const {
+    DrawRectangle(cardX, cardY, cardW, cardH, Color{ 4, 11, 24, 252 });
+    Color roleCol = (drone.role == DroneRole::RECON) ? SKYBLUE : ((drone.role == DroneRole::TASK_FORCE) ? ORANGE : LIME);
+    DrawRectangleLines(cardX, cardY, cardW, cardH, roleCol);
+    DrawRectangleLines(cardX + 2, cardY + 2, cardW - 4, cardH - 4, Fade(roleCol, 0.4f));
+
+    const char* rName = (drone.role == DroneRole::RECON) ? "RECON SCOUT" : ((drone.role == DroneRole::TASK_FORCE) ? "TASK FORCE STRIKE" : "SUPPORT TANKER");
+    DrawCustomText(TextFormat("DRONE #%d - %s", drone.id, rName), (float)(cardX + 15), (float)(cardY + 12), 14.0f, roleCol);
+    DrawLine(cardX + 15, cardY + 30, cardX + cardW - 15, cardY + 30, Fade(roleCol, 0.5f));
+
+    int cy = cardY + 38;
+    auto DrawRow = [&](const char* label, const char* val, Color col) {
+        DrawCustomText(label, (float)(cardX + 15), (float)cy, 11.0f, LIGHTGRAY);
+        float vW = fontLoaded ? MeasureTextEx(customFont, val, 11.0f, 1.0f).x : (float)MeasureText(val, 11);
+        DrawCustomText(val, (float)(cardX + cardW - 15 - (int)vW), (float)cy, 11.0f, col);
+        cy += 19;
+    };
+
+    DrawRow("Telemetry Status:", drone.isDestroyed ? "CRASHED / SAR" : ((drone.state == DroneState::IDLE_AT_BASE) ? "DOCKED AT BASE" : "IN FLIGHT"), drone.isDestroyed ? RED : LIME);
+    DrawRow("Grid Coordinates:", TextFormat("X: %+.0fm | Z: %+.0fm", drone.position.x, drone.position.z), RAYWHITE);
+    DrawRow("Current Altitude:", TextFormat("%.1f meters (y)", drone.position.y), (drone.position.y < 8.0f) ? YELLOW : SKYBLUE);
+    DrawRow("Air Speed:", TextFormat("%.1f m/s", Vector3Length(drone.velocity)), LIGHTGRAY);
+
+    DrawRow("SNR Link Quality:", TextFormat("%.1f dB (%.0f%% Link)", drone.snrDb, drone.signalQuality * 100.0f), (drone.snrDb > 25.0f) ? LIME : ((drone.snrDb > 15.0f) ? YELLOW : RED));
+    DrawRow("Hull Integrity:", TextFormat("%.0f / %.0f HP", drone.hp, drone.maxHp), (drone.hp > 100.0f) ? LIME : RED);
+    DrawRow("Fuel Level:", TextFormat("%.0f / %.0f Liters", drone.fuel, drone.maxFuel), YELLOW);
+    if (drone.role != DroneRole::RECON) {
+        DrawRow("Ammunition:", TextFormat("%.0f / %.0f Rounds", drone.ammo, drone.maxAmmo), RED);
+    }
+
+    if (drone.assignedClusterId != -1) {
+        DrawRow("Assigned Mission:", TextFormat("Engaging Cluster #%d", drone.assignedClusterId), GOLD);
+    } else {
+        DrawRow("Assigned Mission:", "Patrol / Standby", LIGHTGRAY);
+    }
+
+    DrawLine(cardX + 15, cardY + cardH - 30, cardX + cardW - 15, cardY + cardH - 30, Fade(roleCol, 0.4f));
+    DrawCustomText("[TAB] Track Cam | [X] Deselect", (float)(cardX + 15), (float)(cardY + cardH - 22), 10.0f, GOLD);
+}
+
 void FleetHUD::DrawTacticalMap2D(int mapX, int mapY, int mapW, int mapH, bool fullscreen, const std::vector<std::unique_ptr<Drone>>& drones, const std::vector<EnemyCluster>& clusters) const {
-    DrawRectangle(mapX, mapY, mapW, mapH, Color{ 3, 8, 16, 245 });
+    DrawRectangle(mapX, mapY, mapW, mapH, Color{ 3, 8, 16, 250 });
     DrawRectangleLines(mapX, mapY, mapW, mapH, SKYBLUE);
     DrawRectangleLines(mapX + 2, mapY + 2, mapW - 4, mapH - 4, Fade(SKYBLUE, 0.35f));
 
-    DrawCustomText(fullscreen ? "TACTICAL RADAR ARENA MAP - 1000x1000m GRID (FULLSCREEN)" : "TACTICAL MAP",
-                   mapX + 15, mapY + 10, fullscreen ? 18.0f : 14.0f, SKYBLUE);
+    Vector2 mousePos = GetMousePosition();
+    bool mouseClicked = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+    bool rightClicked = IsMouseButtonPressed(MOUSE_BUTTON_RIGHT);
+
+    if (IsKeyPressed(KEY_X) || rightClicked) {
+        selectedClusterId = -1;
+        selectedMapDroneId = -1;
+    }
+
+    // Header & Filter Bar
+    if (fullscreen) {
+        DrawCustomText("TACTICAL RADAR ARENA MAP - 1000x1000m THEATER GRID [SNR TELEMETRY ACTIVE]",
+                       (float)(mapX + 18), (float)(mapY + 14), 17.0f, SKYBLUE);
+
+        // Filter Bar (Top Right Area)
+        int filterBarW = 680;
+        int filterBarH = 28;
+        int filterBarX = mapX + mapW - filterBarW - 18;
+        int filterBarY = mapY + 12;
+        DrawMapFilterBar2D(filterBarX, filterBarY, filterBarW, filterBarH, drones, clusters);
+    } else {
+        DrawCustomText("TACTICAL MAP", (float)(mapX + 15), (float)(mapY + 10), 14.0f, SKYBLUE);
+    }
 
     float scale = (float)mapW / 1000.0f;
     int centerX = mapX + mapW / 2;
     int centerY = mapY + mapH / 2;
 
-    DrawCircleLines(centerX, centerY, (int)(200 * scale), Fade(SKYBLUE, 0.25f));
-    DrawCircleLines(centerX, centerY, (int)(400 * scale), Fade(SKYBLUE, 0.25f));
-    DrawLine(mapX, centerY, mapX + mapW, centerY, Fade(SKYBLUE, 0.2f));
-    DrawLine(centerX, mapY, centerX, mapY + mapH, Fade(SKYBLUE, 0.2f));
+    if (fullscreen) {
+        // Offset center slightly right if left-side analysis card is open
+        if (selectedClusterId != -1 || selectedMapDroneId != -1) {
+            centerX = mapX + 180 + (mapW - 180) / 2;
+        }
+    }
 
-    DrawRectangleLines(centerX - 6, centerY - 6, 12, 12, SKYBLUE);
-    DrawCustomText("BASE", centerX - 12, centerY - 18, 10.0f, SKYBLUE);
+    // 1. Tactical Grid Lines & Distance Rings
+    for (int g = -400; g <= 400; g += 200) {
+        if (g == 0) continue;
+        int gx = centerX + (int)(g * scale);
+        int gy = centerY + (int)(g * scale);
+        DrawLine(gx, mapY + 50, gx, mapY + mapH - 30, Fade(SKYBLUE, 0.08f));
+        DrawLine(mapX + 30, gy, mapX + mapW - 30, gy, Fade(SKYBLUE, 0.08f));
+        if (fullscreen) {
+            DrawText(TextFormat("%+dm", g), gx + 3, centerY + 3, 9, Fade(SKYBLUE, 0.35f));
+            DrawText(TextFormat("%+dm", -g), centerX + 3, gy - 11, 9, Fade(SKYBLUE, 0.35f));
+        }
+    }
 
+    DrawLine(mapX + 20, centerY, mapX + mapW - 20, centerY, Fade(SKYBLUE, 0.25f));
+    DrawLine(centerX, mapY + 45, centerX, mapY + mapH - 20, Fade(SKYBLUE, 0.25f));
+
+    if (fullscreen) {
+        // Cardinal direction annotations
+        DrawCustomText("[N] 000°", (float)(centerX - 18), (float)(mapY + 48), 10.0f, SKYBLUE);
+        DrawCustomText("[S] 180°", (float)(centerX - 18), (float)(mapY + mapH - 36), 10.0f, SKYBLUE);
+        DrawCustomText("[E] 090°", (float)(mapX + mapW - 65), (float)(centerY - 6), 10.0f, SKYBLUE);
+        DrawCustomText("[W] 270°", (float)(mapX + 25), (float)(centerY - 6), 10.0f, SKYBLUE);
+    }
+
+    // 2. SNR Coverage Concentric Rings (200m, 400m, 600m, 800m)
+    DrawSNRCoverageRings2D(centerX, centerY, scale, fullscreen);
+
+    // 3. Central Hangar Base Marker
+    DrawRectangleLines(centerX - 7, centerY - 7, 14, 14, SKYBLUE);
+    DrawRectangle(centerX - 4, centerY - 4, 8, 8, Fade(SKYBLUE, 0.4f));
+    DrawCustomText("BASE", (float)(centerX - 12), (float)(centerY - 20), 10.0f, SKYBLUE);
+
+    // 4. Draw Flight Trajectory Paths & Destination Vectors for Drones
+    if (fullscreen) {
+        for (const auto& d : drones) {
+            if (d->isDestroyed || d->state == DroneState::IDLE_AT_BASE) continue;
+
+            // Check filter visibility
+            if (activeMapFilter == MapFilterMode::RECON_ONLY && d->role != DroneRole::RECON) continue;
+            if (activeMapFilter == MapFilterMode::TASK_FORCE_ONLY && d->role != DroneRole::TASK_FORCE) continue;
+            if (activeMapFilter == MapFilterMode::SUPPORT_ONLY && d->role != DroneRole::SUPPORT) continue;
+            if (activeMapFilter == MapFilterMode::HOSTILES_ONLY) continue;
+
+            int dx = centerX + (int)(d->position.x * scale);
+            int dy = centerY + (int)(d->position.z * scale);
+            int tx = centerX + (int)(d->targetPosition.x * scale);
+            int ty = centerY + (int)(d->targetPosition.z * scale);
+
+            Color trajCol = (d->role == DroneRole::RECON) ? Fade(SKYBLUE, 0.35f) :
+                            ((d->role == DroneRole::TASK_FORCE) ? Fade(ORANGE, 0.40f) : Fade(LIME, 0.35f));
+
+            DrawLine(dx, dy, tx, ty, trajCol);
+            DrawCircleLines(tx, ty, 3, trajCol);
+        }
+    }
+
+    // 5. Draw Hostile Enemy Clusters
     for (const auto& c : clusters) {
         if (c.status == ClusterStatus::CLEARED) continue;
 
         int cx = centerX + (int)(c.centerPosition.x * scale);
         int cy = centerY + (int)(c.centerPosition.z * scale);
 
-        Color cCol = RED;
+        Color cCol = (c.armedCount > 0) ? Color{ 255, 60, 50, 255 } : Color{ 255, 170, 30, 255 };
         if (c.status == ClusterStatus::UNDETECTED) cCol = YELLOW;
         else if (c.status == ClusterStatus::REPORTED) cCol = ORANGE;
 
-        DrawCircle(cx, cy, 5, cCol);
+        // Hover & Click Detection
+        float distToMouse = Vector2Distance(mousePos, Vector2{ (float)cx, (float)cy });
+        bool isHovered = (distToMouse < 14.0f);
+
+        if (fullscreen && isHovered && mouseClicked) {
+            selectedClusterId = c.id;
+            selectedMapDroneId = -1;
+            if (IsAudioDeviceReady()) AudioManager::Instance().PlayClick();
+        }
+
+        // Draw Cluster Icon & Pulse
+        float pulse = 0.5f + 0.5f * sinf((float)GetTime() * 4.0f + (float)c.id);
+        DrawCircle(cx, cy, isHovered ? 7 : 5, cCol);
+        DrawCircleLines(cx, cy, (int)(8 + pulse * 4), Fade(cCol, 0.6f));
+
         if (fullscreen) {
-            DrawText(TextFormat("#%d (Mag:%d)", c.id, c.calculatedThreatMagnitude), cx + 7, cy - 5, 11, RAYWHITE);
+            DrawText(TextFormat("#%d [Mag:%d]", c.id, c.calculatedThreatMagnitude), cx + 9, cy - 6, 11, RAYWHITE);
+            const char* typeTag = (c.armedCount > 0) ? "ARMED" : "UNARM";
+            DrawText(typeTag, cx + 9, cy + 5, 9, (c.armedCount > 0) ? RED : ORANGE);
+        }
+
+        // Selected Target Bracket
+        if (selectedClusterId == c.id) {
+            int bSize = 14;
+            DrawRectangleLines(cx - bSize, cy - bSize, bSize * 2, bSize * 2, GOLD);
+            DrawCircleLines(cx, cy, bSize + 4, Fade(GOLD, 0.5f));
         }
     }
 
+    // 6. Draw Drones on Map
     for (const auto& d : drones) {
         int dx = centerX + (int)(d->position.x * scale);
         int dy = centerY + (int)(d->position.z * scale);
 
+        // Filter Check
+        bool isDimmed = false;
+        if (activeMapFilter == MapFilterMode::RECON_ONLY && d->role != DroneRole::RECON) isDimmed = true;
+        else if (activeMapFilter == MapFilterMode::TASK_FORCE_ONLY && d->role != DroneRole::TASK_FORCE) isDimmed = true;
+        else if (activeMapFilter == MapFilterMode::SUPPORT_ONLY && d->role != DroneRole::SUPPORT) isDimmed = true;
+        else if (activeMapFilter == MapFilterMode::HOSTILES_ONLY) isDimmed = true;
+
         if (d->isDestroyed) {
-            DrawText("X", dx - 3, dy - 5, 10, RED);
+            DrawText("X", dx - 4, dy - 6, 11, isDimmed ? Fade(RED, 0.3f) : RED);
             continue;
         }
 
-        Color dCol = (d->role == DroneRole::RECON) ? SKYBLUE : ((d->role == DroneRole::TASK_FORCE) ? ORANGE : LIME);
-        DrawCircle(dx, dy, (d->state == DroneState::IDLE_AT_BASE) ? 3 : 5, dCol);
+        // Hover & Click Detection
+        float distToMouse = Vector2Distance(mousePos, Vector2{ (float)dx, (float)dy });
+        bool isHovered = (distToMouse < 12.0f);
 
-        if (fullscreen) {
-            DrawText(TextFormat("#%d", d->id), dx + 6, dy - 6, 11, dCol);
+        if (fullscreen && isHovered && mouseClicked) {
+            selectedMapDroneId = d->id;
+            selectedClusterId = -1;
+            if (IsAudioDeviceReady()) AudioManager::Instance().PlayClick();
         }
 
-        if (d->role == DroneRole::RECON && d->state != DroneState::IDLE_AT_BASE) {
+        Color dCol = (d->role == DroneRole::RECON) ? SKYBLUE : ((d->role == DroneRole::TASK_FORCE) ? ORANGE : LIME);
+        if (isDimmed) dCol = Fade(dCol, 0.20f);
+
+        int dotSize = (d->state == DroneState::IDLE_AT_BASE) ? 3 : (isHovered ? 6 : 5);
+        DrawCircle(dx, dy, dotSize, dCol);
+
+        if (fullscreen && !isDimmed) {
+            DrawText(TextFormat("#%d (%.0fm)", d->id, d->position.y), dx + 7, dy - 6, 11, dCol);
+        }
+
+        // Recon Radar Detection Sweeps
+        if (d->role == DroneRole::RECON && d->state != DroneState::IDLE_AT_BASE && !isDimmed) {
             DrawCircleLines(dx, dy, (int)(140 * scale), Fade(SKYBLUE, 0.35f));
             DrawCircleLines(dx, dy, (int)(70 * scale), Fade(GOLD, 0.25f));
         }
+
+        // Selected Drone Reticle
+        if (selectedMapDroneId == d->id) {
+            int bSize = 12;
+            DrawRectangleLines(dx - bSize, dy - bSize, bSize * 2, bSize * 2, GOLD);
+            DrawCircleLines(dx, dy, bSize + 3, Fade(dCol, 0.6f));
+        }
+    }
+
+    // 7. Interactive Target / Drone Analysis Cards (Left Panel)
+    if (fullscreen) {
+        if (selectedClusterId != -1) {
+            for (const auto& c : clusters) {
+                if (c.id == selectedClusterId) {
+                    DrawTargetAnalysisCard2D(mapX + 20, mapY + 60, 360, mapH - 100, c, drones);
+                    break;
+                }
+            }
+        } else if (selectedMapDroneId != -1) {
+            int dIdx = selectedMapDroneId - 1;
+            if (dIdx >= 0 && dIdx < (int)drones.size()) {
+                DrawMapDroneQuickCard2D(mapX + 20, mapY + 60, 360, mapH - 100, *drones[dIdx]);
+            }
+        }
+    }
+
+    // 8. Precision Tactical Mouse Reticle in Fullscreen Mode
+    if (fullscreen && mousePos.x >= mapX && mousePos.x <= mapX + mapW && mousePos.y >= mapY && mousePos.y <= mapY + mapH) {
+        float worldX = (mousePos.x - (float)centerX) / scale;
+        float worldZ = (mousePos.y - (float)centerY) / scale;
+        float mouseDist = sqrtf(worldX * worldX + worldZ * worldZ);
+
+        DrawCircleLines((int)mousePos.x, (int)mousePos.y, 8, Fade(SKYBLUE, 0.75f));
+        DrawLine((int)mousePos.x - 14, (int)mousePos.y, (int)mousePos.x + 14, (int)mousePos.y, Fade(SKYBLUE, 0.55f));
+        DrawLine((int)mousePos.x, (int)mousePos.y - 14, (int)mousePos.x, (int)mousePos.y + 14, Fade(SKYBLUE, 0.55f));
+
+        const char* coordStr = TextFormat("GRID: X:%+.0fm | Z:%+.0fm [RNG: %.0fm]", worldX, worldZ, mouseDist);
+        DrawCustomText(coordStr, mousePos.x + 12, mousePos.y + 12, 10.0f, SKYBLUE);
     }
 }
 
@@ -874,6 +1243,10 @@ void FleetHUD::Draw2DHUD(const TelemetryContext& telemetry,
     if (showDroneInspector) {
         DrawDroneInspector2D(drones);
     }
+
+    if (showDebriefingPanel) {
+        DrawDebriefingPanel2D(telemetry, drones);
+    }
 }
 
 
@@ -1014,6 +1387,164 @@ void FleetHUD::DrawFLIROverlay2D(const Camera3D& cam, const std::vector<EnemyClu
             }
         }
     }
+}
+
+void FleetHUD::DrawDebriefingPanel2D(const TelemetryContext& telemetry, const std::vector<std::unique_ptr<Drone>>& drones) const {
+    int screenWidth = GetScreenWidth();
+    int screenHeight = GetScreenHeight();
+
+    // 1. Dim translucent screen backdrop
+    DrawRectangle(0, 0, screenWidth, screenHeight, Color{ 2, 6, 12, 215 });
+
+    int panelW = 760;
+    int panelH = 530;
+    int panelX = (screenWidth - panelW) / 2;
+    int panelY = (screenHeight - panelH) / 2;
+
+    // 2. Main Glass Panel & Borders
+    DrawRectangle(panelX, panelY, panelW, panelH, Color{ 4, 11, 24, 252 });
+    DrawRectangleLines(panelX, panelY, panelW, panelH, GOLD);
+    DrawRectangleLines(panelX + 2, panelY + 2, panelW - 4, panelH - 4, Fade(GOLD, 0.45f));
+    DrawRectangleLines(panelX + 4, panelY + 4, panelW - 8, panelH - 8, Fade(SKYBLUE, 0.25f));
+
+    // Corner Tactical Brackets
+    int bLen = 22;
+    DrawLine(panelX - 4, panelY - 4, panelX - 4 + bLen, panelY - 4, GOLD);
+    DrawLine(panelX - 4, panelY - 4, panelX - 4, panelY - 4 + bLen, GOLD);
+    DrawLine(panelX + panelW + 4, panelY - 4, panelX + panelW + 4 - bLen, panelY - 4, GOLD);
+    DrawLine(panelX + panelW + 4, panelY - 4, panelX + panelW + 4, panelY - 4 + bLen, GOLD);
+    DrawLine(panelX - 4, panelY + panelH + 4, panelX - 4 + bLen, panelY + panelH + 4, GOLD);
+    DrawLine(panelX - 4, panelY + panelH + 4, panelX - 4, panelY + panelH + 4 - bLen, GOLD);
+    DrawLine(panelX + panelW + 4, panelY + panelH + 4, panelX + panelW + 4 - bLen, panelY + panelH + 4, GOLD);
+    DrawLine(panelX + panelW + 4, panelY + panelH + 4, panelX + panelW + 4, panelY + panelH + 4 - bLen, GOLD);
+
+    // 3. Header Section
+    DrawCustomText("CLASSIFIED // NATO MILITARY TACTICAL AFTER-ACTION REPORT", panelX + 25, panelY + 18, 11.0f, Fade(GOLD, 0.85f));
+    DrawCustomText("TACTICAL MISSION DEBRIEFING", panelX + 25, panelY + 34, 22.0f, GOLD);
+    DrawCustomText(TextFormat("OPERATION WAVE #%d // THEATER AIRSPACE SUMMARY", telemetry.operationWave), panelX + 25, panelY + 62, 13.0f, SKYBLUE);
+    DrawLine(panelX + 25, panelY + 84, panelX + panelW - 25, panelY + 84, Fade(GOLD, 0.6f));
+
+    // 4. Performance Score & Rank Evaluation Calculation
+    int baseScore = 100;
+    int lostPenalty = telemetry.destroyedDronesCount * 15;
+    int timeMinutes = (int)(telemetry.missionTimeSecs / 60.0f);
+    int timePenalty = timeMinutes * 2;
+    int repairBonus = telemetry.dronesRepairedCount * 10;
+    int targetBonus = telemetry.eliminatedTargetsCount * 2;
+    int clusterBonus = telemetry.eliminatedClustersCount * 5;
+
+    int totalScore = baseScore - lostPenalty - timePenalty + repairBonus + targetBonus + clusterBonus;
+    totalScore = std::clamp(totalScore, 0, 100);
+
+    const char* rankLetter = "S";
+    const char* rankTitle = "PERFECT AIR SUPERIORITY";
+    Color rankCol = GOLD;
+
+    if (totalScore >= 90) {
+        rankLetter = "S";
+        rankTitle = "PERFECT AIR SUPERIORITY";
+        rankCol = GOLD;
+    } else if (totalScore >= 80) {
+        rankLetter = "A";
+        rankTitle = "TACTICAL COMBAT EXCELLENCE";
+        rankCol = LIME;
+    } else if (totalScore >= 70) {
+        rankLetter = "B";
+        rankTitle = "OBJECTIVE ACCOMPLISHED";
+        rankCol = YELLOW;
+    } else {
+        rankLetter = "C";
+        rankTitle = "HEAVY CASUALTIES SUSTAINED";
+        rankCol = ORANGE;
+    }
+
+    // Rank Badge Box (Top Right)
+    int rankBoxW = 200;
+    int rankBoxH = 60;
+    int rankBoxX = panelX + panelW - rankBoxW - 25;
+    int rankBoxY = panelY + 16;
+    DrawRectangle(rankBoxX, rankBoxY, rankBoxW, rankBoxH, Color{ 10, 22, 42, 230 });
+    DrawRectangleLines(rankBoxX, rankBoxY, rankBoxW, rankBoxH, rankCol);
+
+    DrawCircle(rankBoxX + 32, rankBoxY + 30, 22, Color{ 4, 12, 26, 255 });
+    DrawCircleLines(rankBoxX + 32, rankBoxY + 30, 22, rankCol);
+    DrawCustomText(rankLetter, rankBoxX + 24, rankBoxY + 16, 26.0f, rankCol);
+
+    DrawCustomText(TextFormat("GRADE: %s (%d PTS)", rankLetter, totalScore), rankBoxX + 62, rankBoxY + 12, 13.0f, rankCol);
+    DrawCustomText(rankTitle, rankBoxX + 62, rankBoxY + 32, 9.0f, RAYWHITE);
+
+    // 5. Two Columns Matrix for Detailed Breakdown
+    int colW = 345;
+    int colH = 265;
+    int col1X = panelX + 25;
+    int col2X = panelX + panelW - colW - 25;
+    int colY = panelY + 98;
+
+    // --- COLUMN 1: COMBAT & ORDNANCE TELEMETRY ---
+    DrawRectangle(col1X, colY, colW, colH, Color{ 6, 15, 30, 230 });
+    DrawRectangleLines(col1X, colY, colW, colH, SKYBLUE);
+    DrawCustomText("1. COMBAT & ORDNANCE METRICS", col1X + 15, colY + 12, 13.0f, SKYBLUE);
+    DrawLine(col1X + 15, colY + 30, col1X + colW - 15, colY + 30, Fade(SKYBLUE, 0.4f));
+
+    int mMin = (int)(telemetry.missionTimeSecs / 60.0f);
+    int mSec = (int)(fmodf(telemetry.missionTimeSecs, 60.0f));
+
+    int c1Y = colY + 42;
+    auto DrawStatRow = [&](int x, int& y, const char* label, const char* val, Color vCol) {
+        DrawCustomText(label, x + 15, y, 12.0f, LIGHTGRAY);
+        DrawCustomText(val, x + colW - 15 - (fontLoaded ? MeasureTextEx(customFont, val, 12.0f, 1.0f).x : (float)MeasureText(val, 12)), y, 12.0f, vCol);
+        y += 24;
+    };
+
+    DrawStatRow(col1X, c1Y, "Operation Mission Time:", TextFormat("%02d:%02d", mMin, mSec), RAYWHITE);
+    DrawStatRow(col1X, c1Y, "Hostiles Eliminated:", TextFormat("%d Units", telemetry.eliminatedTargetsCount), RED);
+    DrawStatRow(col1X, c1Y, "Threat Clusters Cleared:", TextFormat("%d Sectors", telemetry.eliminatedClustersCount), GOLD);
+    DrawStatRow(col1X, c1Y, "Micro-Missiles Expended:", TextFormat("%d Fired", telemetry.missilesFiredCount), ORANGE);
+    DrawStatRow(col1X, c1Y, "Defensive Flares Deployed:", TextFormat("%d Pods", telemetry.flaresFiredCount), YELLOW);
+    DrawStatRow(col1X, c1Y, "Hostile Contact Severity:", TextFormat("Wave #%d Hostiles", telemetry.operationWave), SKYBLUE);
+    DrawStatRow(col1X, c1Y, "Combat Efficiency Rating:", TextFormat("%.1f%%", (float)totalScore * 0.98f), LIME);
+
+    // --- COLUMN 2: LOGISTICS & FLEET READINESS ---
+    DrawRectangle(col2X, colY, colW, colH, Color{ 6, 15, 30, 230 });
+    DrawRectangleLines(col2X, colY, colW, colH, LIME);
+    DrawCustomText("2. LOGISTICS & FLEET READINESS", col2X + 15, colY + 12, 13.0f, LIME);
+    DrawLine(col2X + 15, colY + 30, col2X + colW - 15, colY + 30, Fade(LIME, 0.4f));
+
+    int activeDrones = 0;
+    float avgSnr = 0.0f;
+    for (const auto& d : drones) {
+        if (!d->isDestroyed) activeDrones++;
+        avgSnr += d->snrDb;
+    }
+    if (!drones.empty()) avgSnr /= (float)drones.size();
+
+    int c2Y = colY + 42;
+    DrawStatRow(col2X, c2Y, "Total Fuel Consumed:", TextFormat("%.1f Liters", telemetry.totalFuelBurned), YELLOW);
+    DrawStatRow(col2X, c2Y, "Operational Fleet Strength:", TextFormat("%d / %d (%.0f%%)", activeDrones, (int)drones.size(), (float)activeDrones / (float)drones.size() * 100.0f), (activeDrones == 9) ? LIME : YELLOW);
+    DrawStatRow(col2X, c2Y, "Drones Lost (Casualties):", TextFormat("%d Drones", telemetry.destroyedDronesCount), (telemetry.destroyedDronesCount == 0) ? LIME : RED);
+    DrawStatRow(col2X, c2Y, "Drones Repaired / SAR Rescued:", TextFormat("%d Recoveries", telemetry.dronesRepairedCount), SKYBLUE);
+    DrawStatRow(col2X, c2Y, "Average SNR Radio Quality:", TextFormat("%.1f dB", avgSnr), avgSnr > 25.0f ? LIME : YELLOW);
+    DrawStatRow(col2X, c2Y, "Base Hangar Supplies:", "9999L Fuel / 9999 Ammo", LIGHTGRAY);
+    DrawStatRow(col2X, c2Y, "Autonomous Fleet Status:", (activeDrones >= 7) ? "COMBAT READY" : "REINFORCEMENTS NEEDED", (activeDrones >= 7) ? LIME : ORANGE);
+
+    // 6. Tactical Seal / Banner across Bottom-Center
+    int sealW = 520;
+    int sealH = 32;
+    int sealX = panelX + (panelW - sealW) / 2;
+    int sealY = colY + colH + 12;
+
+    bool sealBlink = ((int)(GetTime() * 2.5f)) % 2 == 0;
+    DrawRectangle(sealX, sealY, sealW, sealH, Color{ 10, 30, 20, 235 });
+    DrawRectangleLines(sealX, sealY, sealW, sealH, sealBlink ? LIME : GREEN);
+    DrawCustomText("★ ALL OBJECTIVES SATISFIED // AIRSPACE SECURED ★", sealX + 45, sealY + 8, 14.0f, sealBlink ? RAYWHITE : LIME);
+
+    // 7. Footer Controls & Action Buttons
+    int footY = panelY + panelH - 34;
+    DrawLine(panelX + 25, footY - 8, panelX + panelW - 25, footY - 8, Fade(GOLD, 0.4f));
+
+    DrawCustomText("[SPACE] / [ENTER] Start Next Operation Wave", panelX + 35, footY, 12.0f, GOLD);
+    DrawCustomText("[F7] Close Debriefing Panel", panelX + 380, footY, 12.0f, SKYBLUE);
+    DrawCustomText("[ESC] Main Menu", panelX + panelW - 145, footY, 12.0f, LIGHTGRAY);
 }
 
 } // namespace DroneFleet

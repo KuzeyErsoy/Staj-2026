@@ -54,6 +54,16 @@ struct CountermeasureParticle {
     bool isAlive = true;
 };
 
+struct DownwashParticle {
+    Vector3 position = { 0.0f, 0.0f, 0.0f };
+    Vector3 velocity = { 0.0f, 0.0f, 0.0f };
+    Color color = WHITE;
+    float life = 0.0f;
+    float maxLife = 1.0f;
+    float size = 0.20f;
+    bool isAlive = true;
+};
+
 struct Enemy {
     int id = 0;
     Vector3 position = { 0.0f, 0.0f, 0.0f };
@@ -92,6 +102,17 @@ struct TelemetryContext {
     int activeClustersCount = 0;
     int destroyedDronesCount = 0;
     
+    // Operation Debriefing & Mission Statistics (Day 6)
+    float missionTimeSecs = 0.0f;
+    int missilesFiredCount = 0;
+    int flaresFiredCount = 0;
+    float totalFuelBurned = 0.0f;
+    int dronesRepairedCount = 0;
+    int eliminatedClustersCount = 0;
+    int operationWave = 1;
+    bool isDebriefingOpen = false;
+    bool waveClearedAnnounced = false;
+
     std::vector<std::string> terminalLogs;
 };
 
